@@ -6,7 +6,7 @@ all: $(ISO_FILE)
 $(ISO_FILE): build_image
 	@echo "Creating kernel iso image..."
 	docker run -v $(CURDIR):/kfs $(DOCKER_IMAGE)
-	rm -f src/boot.o src/multiboot_header.o isofiles/boot/kernel.bin
+	rm -f src/assembly/boot.o src/assembly/multiboot_header.o isofiles/boot/kernel.bin
 
 build_image:
 	@if [ -z $$(docker images -q $(DOCKER_IMAGE)) ]; then \
@@ -18,7 +18,7 @@ build_image:
 
 clean:
 	@echo "Cleaning up..."
-	rm -f src/boot.o src/multiboot_header.o $(ISO_FILE)
+	rm -f src/assembly/boot.o src/assembly/multiboot_header.o $(ISO_FILE)
 
 fclean: clean
 	docker system prune -af
