@@ -4,19 +4,25 @@ FROM debian:latest
 RUN apt-get update && \
     apt-get install -y \
     nasm \
-    rustc \
+    curl \
     build-essential \
     grub-common \
     xorriso \
+    grub-pc-bin \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Install grub-pc-bin
-RUN apt-get update && \
-    apt-get install -y grub-pc-bin \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
+    --default-toolchain nightly \
+    --profile minimal \
+    --no-modify-path
 
 # Set environment variables
 ENV PATH="/root/.cargo/bin:${PATH}"
+
+RUN cargo install xargo
+
+RUN rustup default nightly
+RUN rustup component add rust-src
 
 # Create a working directory
 RUN mkdir /kfs

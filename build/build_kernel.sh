@@ -1,12 +1,13 @@
 #!/bin/bash
 
-nasm -f elf64 src/assembly/multiboot_header.asm
-nasm -f elf64 src/assembly/boot.asm
-nasm -f elf64 src/assembly/long_mode_init.asm
-ld -n -o kfs.bin -T src/assembly/linker.ld \
-    src/assembly/multiboot_header.o \
-    src/assembly/boot.o \
-    src/assembly/long_mode_init.o
+nasm -f elf32 src/boot/multiboot_header.asm
+nasm -f elf32 src/boot/boot.asm
+RUST_TARGET_PATH=$(pwd) xargo build --target=i386-unknown-none
+
+ld -m elf_i386 -n -o kfs.bin -T linker.ld \
+    src/boot/multiboot_header.o \
+    src/boot/boot.o \
+    target/i386-unknown-none/debug/libkfs.a
 
 mv kfs.bin ./isofiles/boot/kernel.bin
 

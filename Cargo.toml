@@ -1,0 +1,7 @@
+[package]
+name = "kfs"
+version = "0.1.0"
+authors = ["tgrasset/jlanza"]
+
+[lib]
+crate-type = ["staticlib"]
