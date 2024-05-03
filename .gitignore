@@ -1,3 +1,4 @@
 Cargo.lock
 /target
 kfs.iso
+isofiles/boot/kernel.bin

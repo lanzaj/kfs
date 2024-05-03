@@ -5,6 +5,7 @@ authors = ["tgrasset/jlanza"]
 
 [lib]
 crate-type = ["staticlib"]
+test = false
 
 [dependencies]
 volatile = "0.2.6"
