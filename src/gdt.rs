@@ -24,10 +24,10 @@ impl GdtEntry {
         GdtEntry {
             limit_low: (limit & 0xffff) as u16,
             base_low: (base & 0xffff) as u16,
-            base_middle: ((base & 0xff0000) >> 16) as u8,
+            base_middle: ((base >> 16) & 0xff) as u8,
             access: access,
-            granularity: (((limit & 0xf0000) >> 16) | (other & 0xf0) as u32)  as u8,
-            base_high: ((base & 0xff000000) >> 24) as u8,
+            granularity: (other & 0xf0) | (((limit >> 16) & 0x0f) as u8),
+            base_high: ((base >> 24) & 0xff) as u8,
         }
     }
 }
@@ -38,12 +38,12 @@ lazy_static! {
     #[link_section = ".gdt"]
     pub static ref GDT: [GdtEntry; 7] = [
         GdtEntry::new(0x0, 0x0, 0x0, 0x0),          // NULL
-        GdtEntry::new(0x0, 0xFFFFF, 0x9B, 0x0D),    // Kernel Code
-        GdtEntry::new(0x0, 0xFFFFF, 0x93, 0x0D),    // Kernel Data
-        GdtEntry::new(0x0, 0x0, 0x97, 0x0D),        // Kernel Stack
-        GdtEntry::new(0x0, 0xFFFFF, 0xFF, 0x0D),    // User Code
-        GdtEntry::new(0x0, 0xFFFFF, 0xF3, 0x0D),    // User Data
-        GdtEntry::new(0x0, 0x0, 0xF7, 0x0D),        // User Stack
+        GdtEntry::new(0x0, 0xFFFFF, 0x9B, 0xCF),    // Kernel Code
+        GdtEntry::new(0x0, 0xFFFFF, 0x93, 0xCF),    // Kernel Data
+        GdtEntry::new(0x0, 0x0, 0x97, 0xCF),        // Kernel Stack
+        GdtEntry::new(0x0, 0xFFFFF, 0xFF, 0xCF),    // User Code
+        GdtEntry::new(0x0, 0xFFFFF, 0xF3, 0xCF),    // User Data
+        GdtEntry::new(0x0, 0x0, 0xF7, 0xCF),        // User Stack
     ];
 }
 
@@ -61,7 +61,7 @@ pub fn init_gdt() {
             "mov es, ax",
             "mov fs, ax",
             "mov gs, ax",
-            // "mov ss, ax",  CETTE MERDE FAIT TOUT PETER
+            "mov ss, ax", 
             options(preserves_flags)
         );
     }
