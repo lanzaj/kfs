@@ -18,7 +18,7 @@ build_image:
 
 clean:
 	@echo "Cleaning up..."
-	rm -f src/boot/boot.o src/boot/multiboot_header.o isofiles/boot/kernel.bin $(ISO_FILE)
+	rm -f src/boot/boot.o src/boot/multiboot_header.o isofiles/boot/kernel.bin $(ISO_FILE) target/i386-unknown-none/debug/libkfs.a
 
 fclean: clean
 	docker system prune -af

@@ -1,6 +1,12 @@
 ENTRY(start)
 
 SECTIONS {
+    .gdt 0x00000800 :
+    {
+        *(.gdt)
+        . = ALIGN(0x800);
+    }
+
     . = 1M;
 
     .boot :
@@ -13,4 +19,5 @@ SECTIONS {
     {
         *(.text)
     }
+
 }
