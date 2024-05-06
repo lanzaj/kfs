@@ -56,18 +56,12 @@ pub fn init_gdt() {
             options(readonly, nostack, preserves_flags)
         );
         asm!(
-            "push 0x08",
-            "lea eax, [1f]",
-            "push eax",
-            "retf",
-            "1:",
             "mov ax, 0x10",
             "mov ds, ax",
             "mov es, ax",
             "mov fs, ax",
             "mov gs, ax",
-            "mov ax, 0x18",
-            "mov ss, ax",
+            // "mov ss, ax",  CETTE MERDE FAIT TOUT PETER
             options(preserves_flags)
         );
     }
