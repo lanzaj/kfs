@@ -24,9 +24,11 @@ pub extern fn k_main() {
 /* ************************************************************************** */
 \n\n\n\n\n\n\n\n\n\n\n\n");
     gdt::init_gdt();
-    print_mem_area(0x800 as *mut i32, 24*4);
+    // dump_stack();
+    // print_mem_area(0x800 as *mut i32, 80);
     loop{}
 }
+
 
 //panic!("Ca nous sera vachement utile pour debug");
 
@@ -75,3 +77,14 @@ fn fill_memory() {
         *(addr2) = 0x42u32 as i32;
     }
 }
+
+use core::arch::asm;
+fn dump_stack() {
+    let esp: usize;
+	unsafe {
+        asm!("mov {}, esp", out(reg) esp, options(nomem, nostack));
+	}
+	println!("esp: {:08x}", esp);
+    print_mem_area(esp as *mut i32, 56);
+}
+
