@@ -4,6 +4,10 @@ use core::arch::asm;
 
 use println;
 
+extern {
+    fn load_segment_registers();
+}
+
 #[derive(Debug, Clone, Copy)]
 #[repr(C, packed)]
 pub struct GdtEntry {
@@ -58,15 +62,7 @@ pub fn init_gdt() {
             in(reg) &gdtr,
             options(readonly, nostack, preserves_flags)
         );
-        asm!(
-            "mov ax, 0x10",
-            "mov ds, ax",
-            "mov es, ax",
-            "mov fs, ax",
-            "mov gs, ax",
-            "mov ss, ax", 
-            options(preserves_flags)
-        );
+        load_segment_registers();
     }
     // println!("{:x}", GDT.as_ptr() as u32);
     // print_mem_area(0x00158014 as *mut i32, 92);
