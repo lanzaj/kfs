@@ -5,6 +5,7 @@
 mod vga_buffer;
 mod interrupts;
 mod gdt;
+mod io;
 
 use core::panic::PanicInfo;
 
@@ -13,16 +14,19 @@ pub extern fn k_main() {
     vga_buffer::print_welcome_screen();
     gdt::init_gdt();
     interrupts::init_idt();
-    unsafe {
-        asm!(
-            "mov ax, 2",
-            "mov bl, 0",
-            "div bl"
-        );
-    }
+    // unsafe {
+    //     asm!(
+    //         "mov ax, 2",
+    //         "mov bl, 0",
+    //         "div bl"
+    //     );
+    // }
     // dump_stack();
     // print_mem_area(0x800 as *mut i32, 10);
-    loop{}
+    loop{
+        let scan_code = read_data();
+        handle_keyboard_input(scan_code);
+    }
 }
 
 #[panic_handler]
@@ -75,6 +79,8 @@ fn fill_memory() {
 }
 
 use core::arch::asm;
+
+use io::{handle_keyboard_input, read_data};
 
 use crate::vga_buffer::{disable_cursor, WRITER};
 fn dump_stack() {
