@@ -126,6 +126,7 @@ lazy_static! {
     });
 }
 
+use core::arch::asm;
 use core::fmt;
 
 impl fmt::Write for Writer {
@@ -150,4 +151,24 @@ macro_rules! println {
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
     WRITER.lock().write_fmt(args).unwrap();
+}
+const VGA_COMMAND_PORT: u16 = 0x3D4;
+const VGA_DATA_PORT: u16 = 0x3D5;
+
+pub fn disable_cursor() {
+    unsafe {
+        // Send command to VGA controller to disable cursor
+        asm!(
+            "out dx, al", 
+            in("dx") VGA_COMMAND_PORT, 
+            in("al") 0x0Au8
+        );
+
+        // Send value 0x20 to the data port to disable cursor
+        asm!(
+            "out dx, al", 
+            in("dx") VGA_DATA_PORT, 
+            in("al") 0x20u8
+        );
+    }
 }

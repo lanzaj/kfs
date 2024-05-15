@@ -10,6 +10,7 @@ use core::panic::PanicInfo;
 
 #[no_mangle]
 pub extern fn k_main() {
+    disable_cursor();
     println!(
 "/* ************************************************************************** */
 /*                                                                            */
@@ -79,6 +80,8 @@ fn fill_memory() {
 }
 
 use core::arch::asm;
+
+use crate::vga_buffer::disable_cursor;
 fn dump_stack() {
     let esp: usize;
 	unsafe {
