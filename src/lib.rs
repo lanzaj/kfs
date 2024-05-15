@@ -11,7 +11,7 @@ use core::panic::PanicInfo;
 #[no_mangle]
 pub extern fn k_main() {
     disable_cursor();
-    println!(
+    print!(
 "/* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
@@ -22,11 +22,12 @@ pub extern fn k_main() {
 /*                                                     #+#    #+#             */
 /*                                                    ###   ########.fr       */
 /*                                                                            */
-/* ************************************************************************** */
-\n\n\n\n\n\n\n\n\n\n\n\n");
+/* ************************************************************************** */");
+    WRITER.lock().change_color(vga_buffer::Color::White, vga_buffer::Color::Black);
+    println!("\n\n\n\n\n\n\n\n\n\n\n\n");
     gdt::init_gdt();
     // dump_stack();
-    print_mem_area(0x800 as *mut i32, 80);
+    print_mem_area(0x800 as *mut i32, 10);
     loop{}
 }
 
@@ -81,7 +82,7 @@ fn fill_memory() {
 
 use core::arch::asm;
 
-use crate::vga_buffer::disable_cursor;
+use crate::vga_buffer::{disable_cursor, WRITER};
 fn dump_stack() {
     let esp: usize;
 	unsafe {

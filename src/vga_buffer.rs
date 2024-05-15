@@ -113,6 +113,9 @@ impl Writer {
             }
         }
     }
+    pub fn change_color(&mut self, foreground: Color, background: Color) {
+        self.color_code = ColorCode::new(foreground, background);
+    }
 }
 
 use self::lazy_static::lazy_static;
@@ -121,7 +124,7 @@ use self::spin::Mutex;
 lazy_static! {
     pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
         column_position: 0,
-        color_code: ColorCode::new(Color::Yellow, Color::Black),
+        color_code: ColorCode::new(Color::Yellow, Color::Blue),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
     });
 }
@@ -152,6 +155,7 @@ pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
     WRITER.lock().write_fmt(args).unwrap();
 }
+
 const VGA_COMMAND_PORT: u16 = 0x3D4;
 const VGA_DATA_PORT: u16 = 0x3D5;
 
