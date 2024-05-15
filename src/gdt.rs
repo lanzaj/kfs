@@ -36,11 +36,8 @@ impl GdtEntry {
 
 use crate::{print_mem_area, print_mem_line};
 
-use self::lazy_static::lazy_static;
-
-lazy_static! {
-    #[link_section = ".gdt"]
-    static ref GDT: [GdtEntry; 7] = [
+pub fn init_gdt() {
+    let gdt: [GdtEntry; 7] = [
         GdtEntry::new(0x0, 0x0, 0x0, 0x0),          // NULL
         GdtEntry::new(0x0, 0xFFFFF, 0x9A, 0xCF),    // Kernel Code
         GdtEntry::new(0x0, 0xFFFFF, 0x92, 0xCF),    // Kernel Data
@@ -49,22 +46,15 @@ lazy_static! {
         GdtEntry::new(0x0, 0xFFFFF, 0xF2, 0xCF),    // User Data
         GdtEntry::new(0x0, 0x0, 0xF8, 0xCF),        // User Stack
     ];
-}
-
-
-pub fn init_gdt() {
     let dest_addr = 0x800 as *mut GdtEntry;
-
-    // Iterate over each entry in the GDT and copy it to the destination address
-    for (index, entry) in GDT.iter().enumerate() {
+    for (index, entry) in gdt.iter().enumerate() {
         unsafe {
             let dest_entry = dest_addr.offset(index as isize);
             core::ptr::write(dest_entry, *entry);
         }
     }
-    let gdtr = GdtR {size: GDT.len() as u16 * core::mem::size_of::<GdtEntry>() as u16, addr: dest_addr as u32};
-    unsafe {
-        
+    let gdtr = GdtR {size: gdt.len() as u16 * core::mem::size_of::<GdtEntry>() as u16, addr: dest_addr as u32};
+    unsafe { 
         asm!(
             "lgdt [{0}]",
             in(reg) &gdtr,

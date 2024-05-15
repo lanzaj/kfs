@@ -25,7 +25,7 @@ pub extern fn k_main() {
 \n\n\n\n\n\n\n\n\n\n\n\n");
     gdt::init_gdt();
     // dump_stack();
-    // print_mem_area(0x800 as *mut i32, 80);
+    print_mem_area(0x800 as *mut i32, 80);
     loop{}
 }
 
