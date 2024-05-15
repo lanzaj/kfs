@@ -34,8 +34,6 @@ impl GdtEntry {
     }
 }
 
-use crate::{print_mem_area, print_mem_line};
-
 pub fn init_gdt() {
     let gdt: [GdtEntry; 7] = [
         GdtEntry::new(0x0, 0x0, 0x0, 0x0),          // NULL

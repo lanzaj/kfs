@@ -1,4 +1,4 @@
-#![feature(lang_items)]
+#![feature(lang_items, asm, naked_functions, core_intrinsics)]
 #![no_std]
 #![no_main]
 
@@ -10,29 +10,20 @@ use core::panic::PanicInfo;
 
 #[no_mangle]
 pub extern fn k_main() {
-    disable_cursor();
-    print!(
-"/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*      kfs                                             :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: tgrasset and jlanza                        +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*                                                     #+#    #+#             */
-/*                                                    ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */");
-    WRITER.lock().change_color(vga_buffer::Color::White, vga_buffer::Color::Black);
-    println!("\n\n\n\n\n\n\n\n\n\n\n\n");
+    vga_buffer::print_welcome_screen();
     gdt::init_gdt();
+    interrupts::init_idt();
+    unsafe {
+        asm!(
+            "mov ax, 2",
+            "mov bl, 0",
+            "div bl"
+        );
+    }
     // dump_stack();
-    print_mem_area(0x800 as *mut i32, 10);
+    // print_mem_area(0x800 as *mut i32, 10);
     loop{}
 }
-
-
-//panic!("Ca nous sera vachement utile pour debug");
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
@@ -41,8 +32,11 @@ fn panic(info: &PanicInfo) -> ! {
 }
 
 fn print_mem_area(addr: *mut i32, size: usize) {
+    let mut addr_value = addr as i32;
+    addr_value = addr_value - addr_value % 4;
+    let addr_value = addr_value as *mut i32;
     for number in 0..(size / 4) {
-        print_mem_line(addr.wrapping_add(number * 4));
+        print_mem_line(addr_value.wrapping_add(number * 4));
     }
 }
 
