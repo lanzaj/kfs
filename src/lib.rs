@@ -3,7 +3,6 @@
 #![no_main]
 
 mod vga_buffer;
-mod interrupts;
 mod gdt;
 mod io;
 
@@ -13,14 +12,6 @@ use core::panic::PanicInfo;
 pub extern fn k_main() {
     vga_buffer::print_welcome_screen();
     gdt::init_gdt();
-    interrupts::init_idt();
-    // unsafe {
-    //     asm!(
-    //         "mov ax, 2",
-    //         "mov bl, 0",
-    //         "div bl"
-    //     );
-    // }
     // dump_stack();
     // print_mem_area(0x800 as *mut i32, 10);
     loop{

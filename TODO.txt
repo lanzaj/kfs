@@ -1,0 +1,21 @@
+AFFICHAGE MAJ
+Gerer le fait d'appeler des commandes quand enter
+Tableau 1 pour commandes x 3
+Tableau 2 pour scroll x 3
+Limitation a 80 de largeur
+3 burreaux
+
+
+
+Idees cmd :
+
+echo
+dumpstack
+print_memory [addr] [size]
+help
+reboot
+shutdown
+color [color]
+nyan_cat
+(tetris)
+(ls / touch)
