@@ -1,6 +1,6 @@
 use println;
 
-use crate::print;
+use crate::{print, vga_buffer::{self, Color}};
 
 const PS2_DATA_PORT: u16 = 0x60;
 const PS2_STATUS_PORT: u16 = 0x64;
@@ -40,6 +40,15 @@ mod io {
 }
 
 pub fn handle_keyboard_input(scan_code: u8) {
+    if scan_code == 26 {
+        vga_buffer::WRITER.lock().scroll_up();
+        return;
+    }
+    if scan_code == 27 {
+        vga_buffer::WRITER.lock().scroll_down();
+        return;
+    }
+    
     //println!("Scan code: {}", scan_code);
     static mut SHIFT : u8 = 0;
     if scan_code == 42 || scan_code == 54 {
