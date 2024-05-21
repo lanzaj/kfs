@@ -42,13 +42,29 @@ mod io {
 pub fn handle_keyboard_input(scan_code: u8) {
     //println!("Scan code: {}", scan_code);
     static mut SHIFT : u8 = 0;
+    static mut CAPS : u8 = 0;
     if scan_code == 42 || scan_code == 54 {
-        unsafe { SHIFT = 1 };
+        unsafe { SHIFT = SHIFT + 1 };
+        return;
     }
-    
+    if scan_code == 170 || scan_code == 182 {
+        unsafe { SHIFT = SHIFT - 1 };
+        return;
+    }
+    if scan_code == 58 {
+        unsafe {
+            if CAPS == 0 {
+                CAPS = 1;
+            }
+            else {
+                CAPS = 0;
+            }
+        };
+        return;
+    }
     const KBD_US: [&str; 59] = [
         "\0", // 0
-        "\x1b", // 1
+        "\x1b", // 1 - echap
         "1", // 2
         "2", // 3
         "3", // 4
@@ -61,7 +77,7 @@ pub fn handle_keyboard_input(scan_code: u8) {
         "0", // 11
         "-", // 12
         "=", // 13
-        "\x08", // 14
+        "\x08", // 14 - delete key
         "\t", // 15
         "q", // 16
         "w", // 17
@@ -109,7 +125,75 @@ pub fn handle_keyboard_input(scan_code: u8) {
         // Continue with the rest of the characters
         // Make sure to add the rest of the characters with their respective indices
     ];
+    const KBD_US_MAJ: [&str; 59] = [
+        "\0", // 0
+        "\x1b", // 1 - echap
+        "!", // 2
+        "@", // 3
+        "#", // 4
+        "$", // 5
+        "%", // 6
+        "^", // 7
+        "&", // 8
+        "*", // 9
+        "(", // 10
+        ")", // 11
+        "_", // 12
+        "+", // 13
+        "\x08", // 14 - delete key
+        "\t", // 15
+        "Q", // 16
+        "W", // 17
+        "E", // 18
+        "R", // 19
+        "T", // 20
+        "Y", // 21
+        "U", // 22
+        "I", // 23
+        "O", // 24
+        "P", // 25
+        "{", // 26
+        "}", // 27
+        "\n", // 28
+        "\0", // 29 - Control key
+        "A", // 30
+        "S", // 31
+        "D", // 32
+        "F", // 33
+        "G", // 34
+        "H", // 35
+        "J", // 36
+        "K", // 37
+        "L", // 38
+        ":", // 39
+        "\"", // 40
+        "~", // 41
+        "\0", // 42 - Shift key
+        "|", // 43
+        "Z", // 44
+        "X", // 45
+        "C", // 46
+        "V", // 47
+        "B", // 48
+        "N", // 49
+        "M", // 50
+        "<", // 51
+        ">", // 52
+        "?", // 53
+        "\0", // 54 - Right Shift key
+        "\0", // 55 - *
+        "\0", // 56 - Alt key
+        " ", // 57 - Space
+        "\0", // 58 - Caps Lock
+        // Continue with the rest of the characters
+        // Make sure to add the rest of the characters with their respective indices
+    ];
     if (scan_code as usize) < KBD_US.len() && scan_code != '\0' as u8 {
-        print!("{}",KBD_US[scan_code as usize]);
+        if unsafe {SHIFT == 0 && CAPS == 0} {
+            print!("{}",KBD_US[scan_code as usize]);
+        }
+        else {
+            print!("{}",KBD_US_MAJ[scan_code as usize]);
+        }
     }
 }
