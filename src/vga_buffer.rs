@@ -25,6 +25,10 @@ pub enum Color {
     White      = 15,
 }
 
+const BUFFER_HEIGHT: usize = 25;
+const BUFFER_WIDTH: usize = 80;
+const LINE_NB: usize = 1000;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
 struct ColorCode(u8);
@@ -41,10 +45,6 @@ struct ScreenChar {
     ascii: u8,
     color: ColorCode,
 }
-
-const BUFFER_HEIGHT: usize = 25;
-const BUFFER_WIDTH: usize = 80;
-const LINE_NB: usize = 30;
 
 // since we only write to a buffer and never read from it, we need to
 // make sure these writes won't be optimized by future versions of rust
@@ -67,8 +67,8 @@ impl Vec {
                 color: ColorCode((Color::Black as u8) << 4 | (Color::White as u8)),
             }; BUFFER_WIDTH]; LINE_NB],
             oldest: 0,
-            newest: 0, // 1
-            size: 0, // 1
+            newest: 0,
+            size: 0,
         }
     }
 
@@ -91,46 +91,17 @@ impl Vec {
             Some(line)
         }
     }
-
-    // fn get_line_from_index(& self, index: usize) -> [ScreenChar; BUFFER_WIDTH] {
-
-    // }
-
-    // fn iter(&self) -> impl Iterator<Item = &[ScreenChar; BUFFER_WIDTH]> {
-    //     VecIter {
-    //         vec: self,
-    //         index: 0,
-    //     }
-    // }
 }
-// struct VecIter<'a> {
-//     vec: &'a Vec,
-//     index: usize,
-// }
-
-// impl<'a> Iterator for VecIter<'a> {
-//     type Item = &'a [ScreenChar; BUFFER_WIDTH];
-
-//     fn next(&mut self) -> Option<Self::Item> {
-//         if self.index < self.vec.size {
-//             let pos = (self.vec.oldest + self.index) % self.vec.buffer.len();
-//             self.index += 1;
-//             Some(&self.vec.buffer[pos])
-//         } else {
-//             None
-//         }
-//     }
-// }
 
 #[repr(transparent)]
-struct Buffer {
+struct Vgabuffer {
     chars: [[Volatile<ScreenChar>; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 
 pub struct Writer {
     column_position: usize,
     color_code: ColorCode,
-    vga_buffer: &'static mut Buffer,
+    vga_buffer: &'static mut Vgabuffer,
     lines: Vec,
     scroll: usize,
 }
@@ -168,12 +139,8 @@ impl Writer {
         self.lines.push_new_line(line);
         self.column_position = 0;
         self.clear_row(BUFFER_HEIGHT - 1);
-        if self.lines.size > BUFFER_HEIGHT - 1 {
-            self.scroll_down();
-        }
-        else {
-            self.update_vga_buffer();
-        }
+        self.scroll = 0;
+        self.update_vga_buffer();
     }
 
     fn clear_row(&mut self, row: usize) {
@@ -200,59 +167,38 @@ impl Writer {
     pub fn change_color(&mut self, foreground: Color, background: Color) {
         self.color_code = ColorCode::new(foreground, background);
     }
-    pub fn scroll_down(&mut self) {
-        if self.scroll < LINE_NB && self.scroll < self.lines.size - BUFFER_HEIGHT - 1 {
+
+    pub fn scroll_up(&mut self) {
+        if self.lines.size > BUFFER_HEIGHT - 2 && self.scroll < self.lines.size - (BUFFER_HEIGHT - 2) {
             self.scroll += 1;
             self.update_vga_buffer();
         }
     }
 
-    pub fn scroll_up(&mut self) {
-        if self.scroll > 0/* self.scroll + BUFFER_HEIGHT < self.lines.size */ {
+    pub fn scroll_down(&mut self) {
+        if self.scroll > 0 {
             self.scroll -= 1;
             self.update_vga_buffer();
         }
     }
 
     fn update_vga_buffer(&mut self) {
-        for row in 0..BUFFER_HEIGHT {
-            self.clear_row(row);
+        let mut offset = 0;
+        if self.lines.size > BUFFER_HEIGHT - 2 {
+            offset = self.lines.newest - (BUFFER_HEIGHT - 2);
         }
-
-        // self.lines[BUFFER_HEIGHT + scroll] --> self.lines[scroll]
-
-        //let start_row = self.scroll;
-        //let end_row = self.scroll + BUFFER_HEIGHT.min(self.lines.size);
-
-        // for row in 0..(BUFFER_HEIGHT - 5) {
-        //     for col in 0..(BUFFER_WIDTH - 5){
-        //         self.vga_buffer.chars[row][col].write(self.lines.buffer[self.lines.newest + row][col]);
-        //     }
-        // }
-
-        // for row in 0..(BUFFER_HEIGHT - 5) {
-        //     for col in 0..(BUFFER_WIDTH - 5){
-        //         self.vga_buffer.chars[row][col].write(ScreenChar {
-        //                        ascii: 65,
-        //                        color: ColorCode((Color::Black as u8) << 4 | (Color::White as u8)),
-        //                     });
-        //     }
-        // }
-        /* for col in 0..BUFFER_WIDTH {
-            //self.vga_buffer.chars[24 - row][col].write(self.lines.buffer[self.lines.newest - 1 - row][col]);
-            self.vga_buffer.chars[24][col].write( ScreenChar {
-                ascii: 65,
-                color: ColorCode((Color::Black as u8) << 4 | (Color::White as u8)),
+        // On pourra mettre ca ailleurs vu qu'il y a pas besoin de redessiner a chaque fois
+        // la ligne de demarcation de la cmd line
+        for col in 0..(BUFFER_WIDTH) {
+            self.vga_buffer.chars[BUFFER_HEIGHT - 2][col].write(ScreenChar {
+                ascii: b'_',
+                color: self.color_code,
             });
-        } */
-
-        for row in 0..(BUFFER_HEIGHT-1) {
+        }
+        for row in 0..(BUFFER_HEIGHT-2) {
+            self.clear_row(row);
             for col in 0..(BUFFER_WIDTH) {
-                self.vga_buffer.chars[row][col].write(self.lines.buffer[row+self.scroll][col]);
-                // self.vga_buffer.chars[23 - row][col].write( ScreenChar {
-                //     ascii: 65,
-                //     color: ColorCode((Color::Black as u8) << 4 | (Color::White as u8)),
-                // });
+                self.vga_buffer.chars[row][col].write(self.lines.buffer[offset + row - self.scroll][col]);
             }
         }
     }
@@ -265,7 +211,7 @@ lazy_static! {
     pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
         column_position: 0,
         color_code: ColorCode::new(Color::Yellow, Color::Blue),
-        vga_buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
+        vga_buffer: unsafe { &mut *(0xb8000 as *mut Vgabuffer) },
         lines: Vec::new(),
         scroll: 0,
     });
@@ -334,5 +280,5 @@ pub fn print_welcome_screen() {
 /*                                                                            */
 /* ************************************************************************** */");
     WRITER.lock().change_color(Color::White, Color::Black);
-    print!("\n");
+    println!("");
 }
