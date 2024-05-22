@@ -169,7 +169,7 @@ impl Writer {
     }
 
     pub fn scroll_up(&mut self) {
-        if self.lines.size > BUFFER_HEIGHT - 2 && self.scroll < self.lines.size - (BUFFER_HEIGHT - 2) {
+        if self.lines.size > BUFFER_HEIGHT - 2 && self.scroll < self.lines.size - (BUFFER_HEIGHT - 2) /* && self.scroll < LINE_NB - (BUFFER_HEIGHT - 2) */{
             self.scroll += 1;
             self.update_vga_buffer();
         }
@@ -183,10 +183,6 @@ impl Writer {
     }
 
     fn update_vga_buffer(&mut self) {
-        let mut offset = 0;
-        if self.lines.size > BUFFER_HEIGHT - 2 {
-            offset = self.lines.newest - (BUFFER_HEIGHT - 2);
-        }
         // On pourra mettre ca ailleurs vu qu'il y a pas besoin de redessiner a chaque fois
         // la ligne de demarcation de la cmd line
         for col in 0..(BUFFER_WIDTH) {
@@ -198,7 +194,7 @@ impl Writer {
         for row in 0..(BUFFER_HEIGHT-2) {
             self.clear_row(row);
             for col in 0..(BUFFER_WIDTH) {
-                self.vga_buffer.chars[row][col].write(self.lines.buffer[offset + row - self.scroll][col]);
+                self.vga_buffer.chars[row][col].write(self.lines.buffer[(LINE_NB - (BUFFER_HEIGHT - 2) + row + self.lines.newest - self.scroll) % LINE_NB][col]);
             }
         }
     }
