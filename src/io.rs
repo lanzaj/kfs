@@ -1,7 +1,7 @@
 use println;
 use print;
 
-use crate::{dump_stack, print_mem_area, vga_buffer::{Color, WRITER}};
+use crate::{dump_stack, print_mem_area, vga_buffer::{self, Color, WRITER}};
 
 const PS2_DATA_PORT: u16 = 0x60;
 const PS2_STATUS_PORT: u16 = 0x64;

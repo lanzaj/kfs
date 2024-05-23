@@ -117,7 +117,7 @@ impl Writer {
                     let row = BUFFER_HEIGHT - 1;
                     let col = self.column_position;
                     let color_code = self.color_code;
-                    self.buffer.chars[row][col].write(ScreenChar{
+                    self.vga_buffer.chars[row][col].write(ScreenChar{
                         ascii: ' ' as u8,
                         color: color_code,
                     });
