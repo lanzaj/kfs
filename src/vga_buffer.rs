@@ -120,6 +120,8 @@ impl Writer {
             match byte {
                 // printable
                 0x20..=0x7e | b'\n' | b'\x08' => self.write_byte(byte),
+                // tab
+                b'\t' => self.write_string("    "),
                 // unprintable -> prints a ■
                 _ => self.write_byte(0xfe),
             }

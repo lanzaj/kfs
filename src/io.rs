@@ -1,6 +1,8 @@
 use println;
 use print;
 
+use crate::{dump_stack, print_mem_area, vga_buffer::{Color, WRITER}};
+
 const PS2_DATA_PORT: u16 = 0x60;
 const PS2_STATUS_PORT: u16 = 0x64;
 
@@ -121,8 +123,6 @@ pub fn handle_keyboard_input(scan_code: u8) {
         "\0", // 56 - Alt key
         " ", // 57 - Space
         "\0", // 58 - Caps Lock
-        // Continue with the rest of the characters
-        // Make sure to add the rest of the characters with their respective indices
     ];
     const KBD_US_MAJ: [&str; 59] = [
         "\0", // 0
@@ -184,8 +184,6 @@ pub fn handle_keyboard_input(scan_code: u8) {
         "\0", // 56 - Alt key
         " ", // 57 - Space
         "\0", // 58 - Caps Lock
-        // Continue with the rest of the characters
-        // Make sure to add the rest of the characters with their respective indices
     ];
     if (scan_code as usize) < KBD_US.len() && scan_code != '\0' as u8 {
         if unsafe {SHIFT == 0 && CAPS == 0} {
@@ -194,5 +192,56 @@ pub fn handle_keyboard_input(scan_code: u8) {
         else {
             print!("{}",KBD_US_MAJ[scan_code as usize]);
         }
+        if scan_code == 28 {
+            call_function("bg_color \n");
+        }
     }
+}
+
+fn call_function (input: &str) {
+    if input.starts_with("color ") {
+        WRITER.lock().change_color(Color::White, Color::Black);
+    }
+    if input.starts_with("bg_color ") {
+        WRITER.lock().change_color(Color::LightBlue, Color::Black);
+    }
+    if input.starts_with("echo ") {
+        ft_echo();
+        return;
+    }
+    if input.starts_with("print_memory ") {
+        print_mem_area(0x800 as *mut i32,100);
+        return;
+    }
+    match input {
+        "dumpstack\n" => dump_stack(),
+        "help\n" => ft_help(),
+        "ls\n" => ft_ls(),
+        "reboot\n" => ft_reboot(),
+        _ => return,
+    }
+}
+
+fn ft_help() {
+    println!("dir    foo    bar    .    ..");
+}
+
+fn ft_reboot() {
+    println!("rebooting ... \n");
+}
+
+fn ft_shutdown() {
+    println!("powering off... \n");
+}
+
+fn ft_nyan_cat() {
+    println!("nyan_cat \n");
+}
+
+fn ft_ls() {
+    println!("dir    foo    bar    .    ..");
+}
+
+fn ft_echo() {
+    println!("Hello World\n");
 }

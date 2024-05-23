@@ -9,13 +9,14 @@ Limitation a 80 de largeur
 
 Idees cmd :
 
-echo
 dumpstack
-print_memory [addr] [size]
 help
 reboot
 shutdown
-color [color]
 nyan_cat
+color [color]
+bg_color [color]
+echo [str]
+print_memory [addr] [size]
 (tetris)
 (ls / touch)
