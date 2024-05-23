@@ -169,7 +169,7 @@ impl Writer {
     }
 
     pub fn scroll_up(&mut self) {
-        if self.lines.size > BUFFER_HEIGHT - 2 && self.scroll < self.lines.size - (BUFFER_HEIGHT - 2) /* && self.scroll < LINE_NB - (BUFFER_HEIGHT - 2) */{
+        if self.lines.size > BUFFER_HEIGHT - 2 && self.scroll < self.lines.size - (BUFFER_HEIGHT - 2) {
             self.scroll += 1;
             self.update_vga_buffer();
         }
@@ -183,12 +183,10 @@ impl Writer {
     }
 
     fn update_vga_buffer(&mut self) {
-        // On pourra mettre ca ailleurs vu qu'il y a pas besoin de redessiner a chaque fois
-        // la ligne de demarcation de la cmd line
         for col in 0..(BUFFER_WIDTH) {
             self.vga_buffer.chars[BUFFER_HEIGHT - 2][col].write(ScreenChar {
                 ascii: b'_',
-                color: self.color_code,
+                color: ColorCode((Color::Black as u8) << 4 | (Color::Blue as u8)),
             });
         }
         for row in 0..(BUFFER_HEIGHT-2) {
