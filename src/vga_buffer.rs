@@ -104,6 +104,7 @@ pub struct Writer {
     vga_buffer: &'static mut Vgabuffer,
     lines: Vec,
     scroll: usize,
+    cmd: bool,
 }
 
 impl Writer {
@@ -112,7 +113,7 @@ impl Writer {
         match byte {
             b'\n' => self.new_line(),
             b'\x08' => {
-                if self.column_position > 0 {
+                if self.column_position > 2 {
                     self.column_position -= 1;
                     let row = BUFFER_HEIGHT - 1;
                     let col = self.column_position;
@@ -149,8 +150,12 @@ impl Writer {
             line[col] = self.vga_buffer.chars[row][col].read();
         }
         self.lines.push_new_line(line);
-        self.column_position = 0;
         self.clear_row(BUFFER_HEIGHT - 1);
+        if self.cmd == true {
+            self.column_position = 2;
+        } else {
+            self.column_position = 0;
+        }
         self.scroll = 0;
         self.update_vga_buffer();
     }
@@ -200,15 +205,39 @@ impl Writer {
         for col in 0..(BUFFER_WIDTH) {
             self.vga_buffer.chars[BUFFER_HEIGHT - 2][col].write(ScreenChar {
                 ascii: b'_',
-                color: ColorCode((Color::Black as u8) << 4 | (Color::Blue as u8)),
+                color: ColorCode((Color::Black as u8) << 4 | (Color::LightBlue as u8)),
             });
         }
+        self.vga_buffer.chars[24][0].write(ScreenChar {
+            ascii: b'$',
+            color: ColorCode((Color::Black as u8) << 4 | (Color::LightBlue as u8)),
+        });
+        self.vga_buffer.chars[24][1].write(ScreenChar {
+            ascii: b'>',
+            color: ColorCode((Color::Black as u8) << 4 | (Color::LightBlue as u8)),
+        });
         for row in 0..(BUFFER_HEIGHT-2) {
             self.clear_row(row);
             for col in 0..(BUFFER_WIDTH) {
                 self.vga_buffer.chars[row][col].write(self.lines.buffer[(LINE_NB - (BUFFER_HEIGHT - 2) + row + self.lines.newest - self.scroll) % LINE_NB][col]);
             }
         }
+    }
+
+    pub fn get_last_line(&mut self) -> [u8; 80] {
+        let raw = self.lines.buffer[self.lines.newest];
+        let mut res: [u8; 80] = [b' '; 80];
+        let mut i: usize = 0;
+        for char in raw {
+            res[i] = char.ascii;
+            i += 1;
+        }
+        res[i] = b'\0';
+        res
+    }
+
+    fn toggle_cmd(&mut self) {
+        self.cmd = !self.cmd;
     }
 }
 
@@ -222,6 +251,7 @@ lazy_static! {
         vga_buffer: unsafe { &mut *(0xb8000 as *mut Vgabuffer) },
         lines: Vec::new(),
         scroll: 0,
+        cmd: false,
     });
 }
 
@@ -288,5 +318,6 @@ pub fn print_welcome_screen() {
 /*                                                                            */
 /* ************************************************************************** */");
     WRITER.lock().change_color(Color::White, Color::Black);
+    WRITER.lock().toggle_cmd();
     println!("");
 }
