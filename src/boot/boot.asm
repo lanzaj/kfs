@@ -29,5 +29,5 @@ error:
 
 section .bss
 stack_bottom:
-    resb 4096
+    resb 10000000
 stack_top:

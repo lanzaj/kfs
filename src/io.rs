@@ -41,6 +41,15 @@ mod io {
 }
 
 pub fn handle_keyboard_input(scan_code: u8) {
+    if scan_code == 26 {
+        vga_buffer::WRITER.lock().scroll_up();
+        return;
+    }
+    if scan_code == 27 {
+        vga_buffer::WRITER.lock().scroll_down();
+        return;
+    }
+    
     //println!("Scan code: {}", scan_code);
     static mut SHIFT : u8 = 0;
     static mut CAPS : u8 = 0;

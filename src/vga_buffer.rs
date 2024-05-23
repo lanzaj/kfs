@@ -2,6 +2,7 @@ extern crate volatile;
 extern crate lazy_static;
 extern crate spin;
 
+
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -24,6 +25,10 @@ pub enum Color {
     White      = 15,
 }
 
+const BUFFER_HEIGHT: usize = 25;
+const BUFFER_WIDTH: usize = 80;
+const LINE_NB: usize = 1000;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
 struct ColorCode(u8);
@@ -41,24 +46,64 @@ struct ScreenChar {
     color: ColorCode,
 }
 
-const BUFFER_HEIGHT: usize = 25;
-const BUFFER_WIDTH: usize = 80;
-
 // since we only write to a buffer and never read from it, we need to
 // make sure these writes won't be optimized by future versions of rust
 // compiler. Making the screenChars volatile tells the compiler that they
 // are absolutely necessary
 use self::volatile::Volatile; 
 
+struct Vec {
+    buffer: [[ScreenChar; BUFFER_WIDTH]; LINE_NB],
+    oldest: usize,
+    newest: usize,
+    size: usize,
+}
+
+impl Vec {
+    fn new() -> Self {
+        Vec {
+            buffer: [[ScreenChar {
+                ascii: b' ',
+                color: ColorCode((Color::Black as u8) << 4 | (Color::White as u8)),
+            }; BUFFER_WIDTH]; LINE_NB],
+            oldest: 0,
+            newest: 0,
+            size: 0,
+        }
+    }
+
+    fn push_new_line(&mut self, line: [ScreenChar; BUFFER_WIDTH]) {
+        if self.size == self.buffer.len() {
+            self.pop_oldest_line();
+        }
+        self.buffer[self.newest] = line;
+        self.newest = (self.newest + 1) % self.buffer.len();
+        self.size += 1
+    }
+
+    fn pop_oldest_line(&mut self) -> Option<[ScreenChar; BUFFER_WIDTH]> {
+        if self.size == 0 {
+            None
+        } else {
+            let line = self.buffer[self.oldest];
+            self.oldest = (self.oldest + 1) % self.buffer.len();
+            self.size -= 1;
+            Some(line)
+        }
+    }
+}
+
 #[repr(transparent)]
-struct Buffer {
+struct Vgabuffer {
     chars: [[Volatile<ScreenChar>; BUFFER_WIDTH]; BUFFER_HEIGHT],
 }
 
 pub struct Writer {
     column_position: usize,
     color_code: ColorCode,
-    buffer: &'static mut Buffer,
+    vga_buffer: &'static mut Vgabuffer,
+    lines: Vec,
+    scroll: usize,
 }
 
 impl Writer {
@@ -85,7 +130,7 @@ impl Writer {
                 let row = BUFFER_HEIGHT - 1;
                 let col = self.column_position;
                 let color_code = self.color_code;
-                self.buffer.chars[row][col].write(ScreenChar{
+                self.vga_buffer.chars[row][col].write(ScreenChar{
                     ascii: byte,
                     color: color_code,
                 });
@@ -95,14 +140,19 @@ impl Writer {
     }
 
     fn new_line(&mut self) {
-        for row in 1..BUFFER_HEIGHT {
-            for col in 0..BUFFER_WIDTH {
-                let character = self.buffer.chars[row][col].read();
-                self.buffer.chars[row -1][col].write(character);
-            }
+        let mut line = [ScreenChar {
+            ascii: b' ',
+            color: self.color_code,
+        }; BUFFER_WIDTH];
+        let row = BUFFER_HEIGHT - 1;
+        for col in 0..BUFFER_WIDTH {
+            line[col] = self.vga_buffer.chars[row][col].read();
         }
-        self.clear_row(BUFFER_HEIGHT - 1);
+        self.lines.push_new_line(line);
         self.column_position = 0;
+        self.clear_row(BUFFER_HEIGHT - 1);
+        self.scroll = 0;
+        self.update_vga_buffer();
     }
 
     fn clear_row(&mut self, row: usize) {
@@ -111,7 +161,7 @@ impl Writer {
             color: self.color_code,
         };
         for col in 0..BUFFER_WIDTH {
-            self.buffer.chars[row][col].write(blank);
+            self.vga_buffer.chars[row][col].write(blank);
         }
     }
 
@@ -127,8 +177,38 @@ impl Writer {
             }
         }
     }
+
     pub fn change_color(&mut self, foreground: Color, background: Color) {
         self.color_code = ColorCode::new(foreground, background);
+    }
+
+    pub fn scroll_up(&mut self) {
+        if self.lines.size > BUFFER_HEIGHT - 2 && self.scroll < self.lines.size - (BUFFER_HEIGHT - 2) {
+            self.scroll += 1;
+            self.update_vga_buffer();
+        }
+    }
+
+    pub fn scroll_down(&mut self) {
+        if self.scroll > 0 {
+            self.scroll -= 1;
+            self.update_vga_buffer();
+        }
+    }
+
+    fn update_vga_buffer(&mut self) {
+        for col in 0..(BUFFER_WIDTH) {
+            self.vga_buffer.chars[BUFFER_HEIGHT - 2][col].write(ScreenChar {
+                ascii: b'_',
+                color: ColorCode((Color::Black as u8) << 4 | (Color::Blue as u8)),
+            });
+        }
+        for row in 0..(BUFFER_HEIGHT-2) {
+            self.clear_row(row);
+            for col in 0..(BUFFER_WIDTH) {
+                self.vga_buffer.chars[row][col].write(self.lines.buffer[(LINE_NB - (BUFFER_HEIGHT - 2) + row + self.lines.newest - self.scroll) % LINE_NB][col]);
+            }
+        }
     }
 }
 
@@ -139,7 +219,9 @@ lazy_static! {
     pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
         column_position: 0,
         color_code: ColorCode::new(Color::Yellow, Color::Blue),
-        buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
+        vga_buffer: unsafe { &mut *(0xb8000 as *mut Vgabuffer) },
+        lines: Vec::new(),
+        scroll: 0,
     });
 }
 
@@ -206,5 +288,5 @@ pub fn print_welcome_screen() {
 /*                                                                            */
 /* ************************************************************************** */");
     WRITER.lock().change_color(Color::White, Color::Black);
-    println!("\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    println!("");
 }

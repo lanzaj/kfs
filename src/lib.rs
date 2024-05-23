@@ -82,4 +82,3 @@ fn dump_stack() {
 	println!("esp: {:08x}", esp);
     print_mem_area(esp as *mut i32, 56);
 }
-
