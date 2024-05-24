@@ -207,7 +207,14 @@ pub fn handle_keyboard_input(scan_code: u8) {
             for (i, char) in cmd.iter().enumerate() {
                 tmp[i] = char.ascii;
             }
-            let str = core::str::from_utf8(&tmp).unwrap();
+            let str = match core::str::from_utf8(&tmp) {
+                Ok(s) => s,
+                Err(_) => {
+                    WRITER.lock().toggle_cmd(true);
+                    println!("Unprintable characters spotted");
+                    return;
+                }
+            };
             if let Some(cmd) = str.strip_prefix("$>") {
                 if !cmd.trim().is_empty() {
                     call_function(str);
@@ -228,15 +235,12 @@ fn call_function (input: &str) {
     if let Some(cmd) = split.next() {
         match cmd {
             "color" => {
-                // ft_color();
-                WRITER.lock().change_color(Color::Black, Color::White);  // a gerer
+                ft_color(input);
             }
             "echo" => {
                 ft_echo(input);
             }
             "stack" => {
-                // WRITER.lock().toggle_cmd(true);
-                // println!("");
                 ft_dump_stack();
             }
             "help" => {
@@ -254,12 +258,21 @@ fn call_function (input: &str) {
             "tetris" => {
                 tetris::ft_tetris();
             }
+            "clear" => {
+                ft_clear();
+            }
             _ => {
                 WRITER.lock().toggle_cmd(true);
                 println!("kfs: {}: command not found", cmd);
-            } // CLEAR
+            }
         }
     }
+}
+
+fn ft_clear() {
+    WRITER.lock().clear_terminal();
+    WRITER.lock().toggle_cmd(true);
+    println!("");
 }
 
 fn ft_42() {
@@ -279,13 +292,48 @@ fn ft_help() {
     println!("halt    : Halts the CPU (Why would you do that?)");
     println!("color   : Changes the writing color <...arg : Color>");
     println!("42      : Prints 42 for kfs1's subject");
+    println!("clear   : Clears the screen");
     WRITER.lock().toggle_cmd(true);
     println!("There might be other hidden features...");
 
 }
 
 fn ft_color(input: &str) {
-
+    if let Some(i) = input.find("color ") { 
+        let color_str = input[i + 6..].trim_start();
+        if let Some(color_word) = color_str.split_whitespace().next() {
+            match color_word {
+                "blue" => {WRITER.lock().change_color(Color::Blue, Color::Black);},
+                "green" => {WRITER.lock().change_color(Color::Green, Color::Black);},
+                "cyan" => {WRITER.lock().change_color(Color::Cyan, Color::Black);},
+                "red" => {WRITER.lock().change_color(Color::Red, Color::Black);},
+                "magenta" => {WRITER.lock().change_color(Color::Magenta, Color::Black);},
+                "brown" => {WRITER.lock().change_color(Color::Brown, Color::Black);},
+                "lightgray" => {WRITER.lock().change_color(Color::LightGray, Color::Black);},
+                "darkgray" => {WRITER.lock().change_color(Color::DarkGray, Color::Black);},
+                "lightblue" => {WRITER.lock().change_color(Color::LightBlue, Color::Black);},
+                "lightgreen" => {WRITER.lock().change_color(Color::LightGreen, Color::Black);},
+                "lightcyan" => {WRITER.lock().change_color(Color::LightCyan, Color::Black);},
+                "lightred" => {WRITER.lock().change_color(Color::LightRed, Color::Black);},
+                "pink" => {WRITER.lock().change_color(Color::Pink, Color::Black);},
+                "yellow" => {WRITER.lock().change_color(Color::Yellow, Color::Black);},
+                "white" => {WRITER.lock().change_color(Color::White, Color::Black);},
+                _ => {
+                    WRITER.lock().toggle_cmd(true);
+                    println!("Invalid color: {}", color_word);
+                    return;
+                }
+            }
+            WRITER.lock().toggle_cmd(true);
+            println!("Now writing in {}", color_word);
+        } else {
+            println!("Please provide a color among those :");
+            println!("    blue, green, cyan, red, magenta, brown, lightgray");
+            println!("    darkgray, lightblue, lightgreen, lightcyan, lightcyan");
+            WRITER.lock().toggle_cmd(true);
+            println!("    lightred, pink, yellow or white.");
+        }
+    }
 }
 
 fn ft_halt() {

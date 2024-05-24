@@ -27,7 +27,7 @@ pub enum Color {
 
 const BUFFER_HEIGHT: usize = 25;
 const BUFFER_WIDTH: usize = 80;
-const LINE_NB: usize = 1000;
+const LINE_NB: usize = 30;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
@@ -180,8 +180,8 @@ impl Writer {
                 0x20..=0x7e | b'\n' | b'\x08' => self.write_byte(byte),
                 // tab
                 b'\t' => self.write_string("    "),
-                // unprintable -> prints a ■
-                _ => self.write_byte(0xfe),
+                // unprintable -> does nothing
+                _ => {},
             }
         }
     }
@@ -251,6 +251,18 @@ impl Writer {
 
     pub fn toggle_cmd(&mut self, state: bool) {
         self.cmd = state;
+    }
+
+    pub fn clear_terminal(&mut self) {
+        let empty_line = [ScreenChar {
+            ascii: b' ',
+            color: self.color_code,
+        }; BUFFER_WIDTH];
+        for i in 0..LINE_NB {
+            self.lines.buffer[i] = empty_line;
+        }
+        self.lines.newest = 1;
+        self.lines.size = 1;
     }
 }
 
