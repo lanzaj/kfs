@@ -41,9 +41,9 @@ impl ColorCode {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(C)] // to guarantee field order is kept
-struct ScreenChar {
-    ascii: u8,
-    color: ColorCode,
+pub struct ScreenChar {
+    pub ascii: u8,
+    pub color: ColorCode,
 }
 
 // since we only write to a buffer and never read from it, we need to
@@ -151,12 +151,11 @@ impl Writer {
         }
         self.lines.push_new_line(line);
         self.clear_row(BUFFER_HEIGHT - 1);
-        if self.cmd == true {
-            self.column_position = 2;
-        } else {
-            self.column_position = 0;
-        }
+        self.column_position = 2;
         self.scroll = 0;
+        // if self.cmd == true && line[3].ascii != b' '{
+        //     self.cmd = false;
+        // }
         self.update_vga_buffer();
     }
 
@@ -202,20 +201,25 @@ impl Writer {
     }
 
     fn update_vga_buffer(&mut self) {
+        // ligne de separation de la cmd line
         for col in 0..(BUFFER_WIDTH) {
             self.vga_buffer.chars[BUFFER_HEIGHT - 2][col].write(ScreenChar {
-                ascii: b'_',
+                ascii: 0xc4,
                 color: ColorCode((Color::Black as u8) << 4 | (Color::LightBlue as u8)),
             });
         }
-        self.vga_buffer.chars[24][0].write(ScreenChar {
-            ascii: b'$',
-            color: ColorCode((Color::Black as u8) << 4 | (Color::LightBlue as u8)),
-        });
-        self.vga_buffer.chars[24][1].write(ScreenChar {
-            ascii: b'>',
-            color: ColorCode((Color::Black as u8) << 4 | (Color::LightBlue as u8)),
-        });
+        // dessiner les deux caracteres du prompt
+        if self.cmd == true {
+            self.vga_buffer.chars[BUFFER_HEIGHT - 1][0].write(ScreenChar {
+                ascii: b'$',
+                color: ColorCode((Color::Black as u8) << 4 | (Color::LightBlue as u8)),
+            });
+            self.vga_buffer.chars[BUFFER_HEIGHT - 1][1].write(ScreenChar {
+                ascii: b'>',
+                color: ColorCode((Color::Black as u8) << 4 | (Color::LightBlue as u8)),
+            });
+        }
+        // nettoyer toutes les lignes de l'historique et les update
         for row in 0..(BUFFER_HEIGHT-2) {
             self.clear_row(row);
             for col in 0..(BUFFER_WIDTH) {
@@ -224,20 +228,12 @@ impl Writer {
         }
     }
 
-    pub fn get_last_line(&mut self) -> [u8; 80] {
-        let raw = self.lines.buffer[self.lines.newest];
-        let mut res: [u8; 80] = [b' '; 80];
-        let mut i: usize = 0;
-        for char in raw {
-            res[i] = char.ascii;
-            i += 1;
-        }
-        res[i] = b'\0';
-        res
+    pub fn get_last_line(&mut self) -> [ScreenChar; 80] {
+        self.lines.buffer[self.lines.newest - 1] // ATTENTION, Ca va peter quand on boucle
     }
 
-    fn toggle_cmd(&mut self) {
-        self.cmd = !self.cmd;
+    pub fn toggle_cmd(&mut self, state: bool) {
+        self.cmd = state;
     }
 }
 
@@ -318,6 +314,6 @@ pub fn print_welcome_screen() {
 /*                                                                            */
 /* ************************************************************************** */");
     WRITER.lock().change_color(Color::White, Color::Black);
-    WRITER.lock().toggle_cmd();
+    WRITER.lock().toggle_cmd(true);
     println!("");
 }

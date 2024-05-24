@@ -1,3 +1,5 @@
+use core::panic;
+
 use println;
 use print;
 
@@ -49,7 +51,6 @@ pub fn handle_keyboard_input(scan_code: u8) {
         vga_buffer::WRITER.lock().scroll_down();
         return;
     }
-    
     //println!("Scan code: {}", scan_code);
     static mut SHIFT : u8 = 0;
     static mut CAPS : u8 = 0;
@@ -202,32 +203,37 @@ pub fn handle_keyboard_input(scan_code: u8) {
             print!("{}",KBD_US_MAJ[scan_code as usize]);
         }
         if scan_code == 28 {
-            call_function("bg_color \n");
+            WRITER.lock().toggle_cmd(false);
+            let cmd = WRITER.lock().get_last_line();
+            let mut tmp: [u8; 80] = [0; 80];
+            for (i, char) in cmd.iter().enumerate() {
+                tmp[i] = char.ascii;
+            }
+            let str = core::str::from_utf8(&tmp).unwrap();
+            call_function(str);
+            WRITER.lock().toggle_cmd(true);
+            println!("");
         }
     }
 }
 
 fn call_function (input: &str) {
-    if input.starts_with("color ") {
-        WRITER.lock().change_color(Color::White, Color::Black);
-    }
-    if input.starts_with("bg_color ") {
-        WRITER.lock().change_color(Color::LightBlue, Color::Black);
-    }
-    if input.starts_with("echo ") {
-        ft_echo();
-        return;
-    }
-    if input.starts_with("print_memory ") {
-        print_mem_area(0x800 as *mut i32,100);
-        return;
-    }
-    match input {
-        "dumpstack\n" => dump_stack(),
-        "help\n" => ft_help(),
-        "ls\n" => ft_ls(),
-        "reboot\n" => ft_reboot(),
-        _ => return,
+    let mut parts = input[2..].split_whitespace();
+    if let Some(cmd) = parts.next() {
+        match cmd {
+            "color" => {
+                WRITER.lock().change_color(Color::Black, Color::White);
+            }
+            "echo" => {
+                ft_echo();
+            }
+            "print_memory" => {
+                print_mem_area(0x800 as *mut i32, 100);
+            }
+            _ => {
+                println!("kfs: {}: command not found", cmd);
+            }
+        }
     }
 }
 
@@ -252,5 +258,10 @@ fn ft_ls() {
 }
 
 fn ft_echo() {
-    println!("Hello World\n");
+    println!("Hello World");
+    println!("Hello World");
+    println!("Hello World");
+    println!("Hello World");
+    println!("Hello World");
+    println!("Hello World");
 }
