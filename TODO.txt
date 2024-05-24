@@ -1,14 +1,12 @@
-AFFICHAGE MAJ
 Gerer le fait d'appeler des commandes quand enter
-Tableau 1 pour commandes x 3
-Tableau 2 pour scroll x 3
-Limitation a 80 de largeur
-3 burreaux
+Tableau pour historique commandes
+tetris
+cursor
+
 
 
 
 Idees cmd :
-
 dumpstack
 help
 reboot
@@ -18,5 +16,3 @@ color [color]
 bg_color [color]
 echo [str]
 print_memory [addr] [size]
-(tetris)
-(ls / touch)

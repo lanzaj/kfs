@@ -31,10 +31,10 @@ const LINE_NB: usize = 1000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
-struct ColorCode(u8);
+pub struct ColorCode(u8);
 
 impl ColorCode {
-    fn new(foreground: Color, background: Color) -> ColorCode {
+    pub fn new(foreground: Color, background: Color) -> ColorCode {
         ColorCode((background as u8) << 4 | (foreground as u8))
     }
 }
@@ -210,6 +210,17 @@ impl Writer {
             }
         }
     }
+
+    pub fn get_vga_buffer(&mut self, row: usize, col: usize) -> ScreenChar {
+        self.vga_buffer.chars[row][col].read()
+    }
+
+    pub fn set_vga_buffer(&mut self, row:usize, col: usize, byte: u8, color_code: ColorCode) {
+        self.vga_buffer.chars[row][col].write(ScreenChar{
+            ascii: byte,
+            color: color_code,
+        });
+    }
 }
 
 use self::lazy_static::lazy_static;
@@ -218,7 +229,7 @@ use self::spin::Mutex;
 lazy_static! {
     pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
         column_position: 0,
-        color_code: ColorCode::new(Color::Yellow, Color::Blue),
+        color_code: ColorCode::new(Color::Yellow, Color::Black),
         vga_buffer: unsafe { &mut *(0xb8000 as *mut Vgabuffer) },
         lines: Vec::new(),
         scroll: 0,

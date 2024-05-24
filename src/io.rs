@@ -7,38 +7,37 @@ const PS2_DATA_PORT: u16 = 0x60;
 const PS2_STATUS_PORT: u16 = 0x64;
 
 pub fn read_status() -> u8 {
-    unsafe { io::inb(PS2_STATUS_PORT) }
+    unsafe { inb(PS2_STATUS_PORT) }
 }
 
 pub fn read_data() -> u8 {
     while (read_status() & 0x01) == 0 {}
-    unsafe { io::inb(PS2_DATA_PORT) }
+    unsafe { inb(PS2_DATA_PORT) }
 }
 
 // Low-level I/O operations
-mod io {
-    use core::arch::asm;
+use core::arch::asm;
 
-    pub unsafe fn inb(port: u16) -> u8 {
-        let result: u8;
-        // Inline assembly to read from the specified port
-        asm!(
-            "in al, dx",
-            in("dx") port,
-            out("al") result,
-        );
-        result
-    }
-
-    pub unsafe fn outb(port: u16, value: u8) {
-        // Inline assembly to write to the specified port
-        asm!(
-            "out dx, al",
-            in("dx") port,
-            in("al") value,
-        );
-    }
+pub unsafe fn inb(port: u16) -> u8 {
+    let result: u8;
+    // Inline assembly to read from the specified port
+    asm!(
+        "in al, dx",
+        in("dx") port,
+        out("al") result,
+    );
+    result
 }
+
+pub unsafe fn outb(port: u16, value: u8) {
+    // Inline assembly to write to the specified port
+    asm!(
+        "out dx, al",
+        in("dx") port,
+        in("al") value,
+    );
+}
+
 
 pub fn handle_keyboard_input(scan_code: u8) {
     if scan_code == 26 {
@@ -201,11 +200,17 @@ pub fn handle_keyboard_input(scan_code: u8) {
         else {
             print!("{}",KBD_US_MAJ[scan_code as usize]);
         }
+        static mut FIRST: bool = true;
         if scan_code == 28 {
-            call_function("bg_color \n");
+            if unsafe{FIRST} {
+                call_function("tetris\n");
+                unsafe{FIRST = false;}
+            }
         }
     }
 }
+
+use tetris::ft_tetris;
 
 fn call_function (input: &str) {
     if input.starts_with("color ") {
@@ -227,6 +232,7 @@ fn call_function (input: &str) {
         "help\n" => ft_help(),
         "ls\n" => ft_ls(),
         "reboot\n" => ft_reboot(),
+        "tetris\n" => ft_tetris(),
         _ => return,
     }
 }
@@ -254,3 +260,4 @@ fn ft_ls() {
 fn ft_echo() {
     println!("Hello World\n");
 }
+
