@@ -1,9 +1,9 @@
-use core::panic;
+use core::{arch::asm, panic};
 
 use println;
 use print;
 
-use crate::{dump_stack, print_mem_area, vga_buffer::{self, Color, WRITER}};
+use crate::{dump_stack, print_mem_area, print_mem_line, vga_buffer::{self, Color, WRITER}};
 
 const PS2_DATA_PORT: u16 = 0x60;
 const PS2_STATUS_PORT: u16 = 0x64;
@@ -203,65 +203,114 @@ pub fn handle_keyboard_input(scan_code: u8) {
             print!("{}",KBD_US_MAJ[scan_code as usize]);
         }
         if scan_code == 28 {
-            WRITER.lock().toggle_cmd(false);
             let cmd = WRITER.lock().get_last_line();
             let mut tmp: [u8; 80] = [0; 80];
             for (i, char) in cmd.iter().enumerate() {
                 tmp[i] = char.ascii;
             }
             let str = core::str::from_utf8(&tmp).unwrap();
-            call_function(str);
-            WRITER.lock().toggle_cmd(true);
-            println!("");
+            if let Some(cmd) = str.strip_prefix("$>") {
+                if !cmd.trim().is_empty() {
+                    call_function(str);
+                } else {
+                    WRITER.lock().toggle_cmd(true);
+                    println!("");
+                }
+            }
         }
     }
 }
 
 fn call_function (input: &str) {
-    let mut parts = input[2..].split_whitespace();
-    if let Some(cmd) = parts.next() {
+    WRITER.lock().toggle_cmd(false);
+    let mut split = input[2..].split_whitespace();
+    if let Some(cmd) = split.next() {
         match cmd {
             "color" => {
                 WRITER.lock().change_color(Color::Black, Color::White);
             }
             "echo" => {
-                ft_echo();
+                ft_echo(input);
             }
-            "print_memory" => {
-                print_mem_area(0x800 as *mut i32, 100);
+            "stack" => {
+                // ft_dump_stack();
+            }
+            "help" => {
+                ft_help();
+            }
+            "42" => {
+                ft_42();
+            }
+            "reboot" => {
+                ft_reboot();
+            }
+            "halt" => {
+                ft_halt();
             }
             _ => {
+                WRITER.lock().toggle_cmd(true);
                 println!("kfs: {}: command not found", cmd);
             }
         }
     }
 }
 
+fn ft_42() {
+    WRITER.lock().toggle_cmd(true);
+    println!("42");
+}
+
 fn ft_help() {
-    println!("dir    foo    bar    .    ..");
+    println!("Welcome to our useless kernel !!!");
+    println!("It can't do much for now and probably never will");
+    println!("But here are a few commands you can use: ");
+    println!("   ");
+    println!("help : This is what you're seeing right now !");
+    println!("echo : Prints something on the screen, WOW !");
+    println!("stack   : Prints the stack");
+    println!("reboot  : Reboots the machine");
+    println!("halt    : Halts the CPU (Why would you do that?)");
+    println!("color   : Changes the writing color <...arg : Color>");
+    println!("42      : Prints 42 for kfs1's subject");
+    WRITER.lock().toggle_cmd(true);
+    println!("There might be other hidden features...");
+
+}
+
+fn ft_halt() {
+    unsafe {
+		asm!("hlt", options(nomem, nostack, preserves_flags));
+	}
 }
 
 fn ft_reboot() {
     println!("rebooting ... \n");
+    unsafe {
+        io::outb(0x64, 0xfe);
+        loop {}
+    }
 }
 
-fn ft_shutdown() {
-    println!("powering off... \n");
+fn ft_echo(input: &str) {
+    WRITER.lock().toggle_cmd(true);
+    if let Some(i) = input.find("echo ") {
+        println!("{}", &input[i + 5..].trim_start());
+    } else {
+        println!("{}", input);
+    }
 }
 
-fn ft_nyan_cat() {
-    println!("nyan_cat \n");
+extern "C" {
+    static stack_bottom: u8;
+    static stack_top: u8;
 }
 
-fn ft_ls() {
-    println!("dir    foo    bar    .    ..");
-}
-
-fn ft_echo() {
-    println!("Hello World");
-    println!("Hello World");
-    println!("Hello World");
-    println!("Hello World");
-    println!("Hello World");
-    println!("Hello World");
-}
+// fn ft_dump_stack() {
+//     unsafe {
+//         let bottom = &stack_bottom as *const u8 as i32;
+//         let top = &stack_top as *const u8 as i32;
+//         for address in (bottom..top).step_by(4) {
+//             print_mem_line(address as );
+//         }
+//     }
+// }

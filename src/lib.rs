@@ -47,27 +47,27 @@ fn print_mem_line(addr: *mut i32) {
     }
 }
 
-fn fill_memory() {
-    let addr: *mut i32 = 0x800 as *mut i32;
-    unsafe {
-        let addr2: *mut i32 = 0x800 as *mut i32;
-        *(addr2) = 0x1u32 as i32;
-        let addr2 = 0x804 as *mut i32;
-        *(addr2) = 0x2u32 as i32;
-        let addr2 = 0x808 as *mut i32;
-        *(addr2) = 0x3u32 as i32;
-        let addr2 = 0x80c as *mut i32;
-        *(addr2) = 0x4u32 as i32;
-        let addr2 = 0x810 as *mut i32;
-        *(addr2) = 0x5u32 as i32;
+// fn fill_memory() {
+//     let addr: *mut i32 = 0x800 as *mut i32;
+//     unsafe {
+//         let addr2: *mut i32 = 0x800 as *mut i32;
+//         *(addr2) = 0x1u32 as i32;
+//         let addr2 = 0x804 as *mut i32;
+//         *(addr2) = 0x2u32 as i32;
+//         let addr2 = 0x808 as *mut i32;
+//         *(addr2) = 0x3u32 as i32;
+//         let addr2 = 0x80c as *mut i32;
+//         *(addr2) = 0x4u32 as i32;
+//         let addr2 = 0x810 as *mut i32;
+//         *(addr2) = 0x5u32 as i32;
 
-        let addr3: *mut i64 = 0x830 as *mut i64;
-        *(addr3) = 0xFF_FFFF_FFFFu64 as i64;
+//         let addr3: *mut i64 = 0x830 as *mut i64;
+//         *(addr3) = 0xFF_FFFF_FFFFu64 as i64;
 
-        let addr2 = 0x838 as *mut i32;
-        *(addr2) = 0x42u32 as i32;
-    }
-}
+//         let addr2 = 0x838 as *mut i32;
+//         *(addr2) = 0x42u32 as i32;
+//     }
+// }
 
 use core::arch::asm;
 

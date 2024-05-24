@@ -151,12 +151,16 @@ impl Writer {
         }
         self.lines.push_new_line(line);
         self.clear_row(BUFFER_HEIGHT - 1);
-        self.column_position = 2;
+        if self.cmd == true {
+            self.column_position = 2;
+        } else {
+            self.column_position = 0;
+        }
         self.scroll = 0;
-        // if self.cmd == true && line[3].ascii != b' '{
-        //     self.cmd = false;
-        // }
         self.update_vga_buffer();
+        if self.cmd == true {
+            self.cmd = false;
+        }
     }
 
     fn clear_row(&mut self, row: usize) {
@@ -208,7 +212,6 @@ impl Writer {
                 color: ColorCode((Color::Black as u8) << 4 | (Color::LightBlue as u8)),
             });
         }
-        // dessiner les deux caracteres du prompt
         if self.cmd == true {
             self.vga_buffer.chars[BUFFER_HEIGHT - 1][0].write(ScreenChar {
                 ascii: b'$',
@@ -229,7 +232,10 @@ impl Writer {
     }
 
     pub fn get_last_line(&mut self) -> [ScreenChar; 80] {
-        self.lines.buffer[self.lines.newest - 1] // ATTENTION, Ca va peter quand on boucle
+        if self.lines.newest == 0 {
+            return self.lines.buffer[LINE_NB - 1];
+        }
+        self.lines.buffer[(self.lines.newest - 1) % LINE_NB]
     }
 
     pub fn toggle_cmd(&mut self, state: bool) {
@@ -314,6 +320,19 @@ pub fn print_welcome_screen() {
 /*                                                                            */
 /* ************************************************************************** */");
     WRITER.lock().change_color(Color::White, Color::Black);
+    println!("");
+    println!(
+"Welcome to our useless kernel !!!
+It can't do much for now and probably never will
+But here are a few commands you can use: 
+ 
+help    : This is more or less what you're seeing right now !
+echo    : Prints something on the screen, WOW ! <...args>
+stack   : Prints the stack
+reboot  : Reboots the machine
+halt    : Halts the CPU (Why would you do that?)
+color   : Changes the writing color <...arg : Color>
+There might be other hidden features...");
     WRITER.lock().toggle_cmd(true);
     println!("");
 }
