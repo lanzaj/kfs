@@ -245,6 +245,7 @@ pub fn ft_tetris() {
     draw_game_board();
     loop {
         if data.end {
+            WRITER.lock().toggle_cmd(true);
             println!("See you soon!                                                            ");
             break;
         }

@@ -228,7 +228,8 @@ fn call_function (input: &str) {
     if let Some(cmd) = split.next() {
         match cmd {
             "color" => {
-                WRITER.lock().change_color(Color::Black, Color::White);
+                // ft_color();
+                WRITER.lock().change_color(Color::Black, Color::White);  // a gerer
             }
             "echo" => {
                 ft_echo(input);
@@ -280,6 +281,10 @@ fn ft_help() {
     println!("42      : Prints 42 for kfs1's subject");
     WRITER.lock().toggle_cmd(true);
     println!("There might be other hidden features...");
+
+}
+
+fn ft_color(input: &str) {
 
 }
 
