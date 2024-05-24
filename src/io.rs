@@ -51,7 +51,7 @@ pub fn handle_keyboard_input(scan_code: u8) {
         vga_buffer::WRITER.lock().scroll_down();
         return;
     }
-    //println!("Scan code: {}", scan_code);
+    // println!("Scan code: {}", scan_code);
     static mut SHIFT : u8 = 0;
     static mut CAPS : u8 = 0;
     if scan_code == 42 || scan_code == 54 {
@@ -233,7 +233,9 @@ fn call_function (input: &str) {
                 ft_echo(input);
             }
             "stack" => {
-                // ft_dump_stack();
+                // WRITER.lock().toggle_cmd(true);
+                // println!("");
+                ft_dump_stack();
             }
             "help" => {
                 ft_help();
@@ -250,14 +252,14 @@ fn call_function (input: &str) {
             _ => {
                 WRITER.lock().toggle_cmd(true);
                 println!("kfs: {}: command not found", cmd);
-            }
+            } // CLEAR
         }
     }
 }
 
 fn ft_42() {
     WRITER.lock().toggle_cmd(true);
-    println!("42");
+    println!("Outstanding kfs1 project: 42");
 }
 
 fn ft_help() {
@@ -305,12 +307,27 @@ extern "C" {
     static stack_top: u8;
 }
 
-// fn ft_dump_stack() {
-//     unsafe {
-//         let bottom = &stack_bottom as *const u8 as i32;
-//         let top = &stack_top as *const u8 as i32;
-//         for address in (bottom..top).step_by(4) {
-//             print_mem_line(address as );
-//         }
-//     }
-// }
+fn ft_dump_stack() {
+    unsafe {
+        // panic!("BOT : {}    TOP:   {}", stack_bottom, stack_top);
+        let bottom = &stack_bottom as *const u8 as usize;
+        let top = &stack_top as *const u8 as usize;
+        println!("Stack from {:#x} to {:#x}", bottom, top);
+        let mut previous_value = 0xffffffff;
+        let mut pass = false;
+        // Iterate over the memory from bottom to top
+        for address in (bottom..top).step_by(4) {
+            // Read the value at the current address
+            let value = *(address as *const u32); // erreur d'affichage
+            if value != previous_value {
+                println!("{:#x}: {:#010x}", address, value);
+            } else if pass == false {
+                println!("[...]");
+                pass = true;
+            }
+            previous_value = value;
+        }
+        WRITER.lock().toggle_cmd(true);
+        println!("------end of stack------")
+    }
+}

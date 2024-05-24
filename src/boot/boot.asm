@@ -1,4 +1,6 @@
 global start
+global stack_bottom
+global stack_top
 extern k_main
 
 section .text
@@ -29,5 +31,5 @@ error:
 
 section .bss
 stack_bottom:
-    resb 10000000
+    resb 1000000
 stack_top:
