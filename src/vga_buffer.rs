@@ -31,10 +31,10 @@ const LINE_NB: usize = 1000;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
-struct ColorCode(u8);
+pub struct ColorCode(u8);
 
 impl ColorCode {
-    fn new(foreground: Color, background: Color) -> ColorCode {
+    pub fn new(foreground: Color, background: Color) -> ColorCode {
         ColorCode((background as u8) << 4 | (foreground as u8))
     }
 }
@@ -229,6 +229,17 @@ impl Writer {
                 self.vga_buffer.chars[row][col].write(self.lines.buffer[(LINE_NB - (BUFFER_HEIGHT - 2) + row + self.lines.newest - self.scroll) % LINE_NB][col]);
             }
         }
+    }
+
+    pub fn get_vga_buffer(&mut self, row: usize, col: usize) -> ScreenChar {
+        self.vga_buffer.chars[row][col].read()
+    }
+
+    pub fn set_vga_buffer(&mut self, row:usize, col: usize, byte: u8, color_code: ColorCode) {
+        self.vga_buffer.chars[row][col].write(ScreenChar{
+            ascii: byte,
+            color: color_code,
+        });
     }
 
     pub fn get_last_line(&mut self) -> [ScreenChar; 80] {

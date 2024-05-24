@@ -5,6 +5,7 @@
 mod vga_buffer;
 mod gdt;
 mod io;
+mod tetris;
 
 use core::panic::PanicInfo;
 

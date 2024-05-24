@@ -3,44 +3,42 @@ use core::{arch::asm, panic};
 use println;
 use print;
 
-use crate::{dump_stack, print_mem_area, print_mem_line, vga_buffer::{self, Color, WRITER}};
+use crate::{dump_stack, print_mem_area, print_mem_line, tetris, vga_buffer::{self, Color, WRITER}};
 
 const PS2_DATA_PORT: u16 = 0x60;
 const PS2_STATUS_PORT: u16 = 0x64;
 
 pub fn read_status() -> u8 {
-    unsafe { io::inb(PS2_STATUS_PORT) }
+    unsafe { inb(PS2_STATUS_PORT) }
 }
 
 pub fn read_data() -> u8 {
     while (read_status() & 0x01) == 0 {}
-    unsafe { io::inb(PS2_DATA_PORT) }
+    unsafe { inb(PS2_DATA_PORT) }
 }
 
 // Low-level I/O operations
-mod io {
-    use core::arch::asm;
 
-    pub unsafe fn inb(port: u16) -> u8 {
-        let result: u8;
-        // Inline assembly to read from the specified port
-        asm!(
-            "in al, dx",
-            in("dx") port,
-            out("al") result,
-        );
-        result
-    }
-
-    pub unsafe fn outb(port: u16, value: u8) {
-        // Inline assembly to write to the specified port
-        asm!(
-            "out dx, al",
-            in("dx") port,
-            in("al") value,
-        );
-    }
+pub unsafe fn inb(port: u16) -> u8 {
+    let result: u8;
+    // Inline assembly to read from the specified port
+    asm!(
+        "in al, dx",
+        in("dx") port,
+        out("al") result,
+    );
+    result
 }
+
+pub unsafe fn outb(port: u16, value: u8) {
+    // Inline assembly to write to the specified port
+    asm!(
+        "out dx, al",
+        in("dx") port,
+        in("al") value,
+    );
+}
+
 
 pub fn handle_keyboard_input(scan_code: u8) {
     if scan_code == 26 {
@@ -202,6 +200,7 @@ pub fn handle_keyboard_input(scan_code: u8) {
         else {
             print!("{}",KBD_US_MAJ[scan_code as usize]);
         }
+        static mut FIRST: bool = true;
         if scan_code == 28 {
             let cmd = WRITER.lock().get_last_line();
             let mut tmp: [u8; 80] = [0; 80];
@@ -220,6 +219,8 @@ pub fn handle_keyboard_input(scan_code: u8) {
         }
     }
 }
+
+use tetris::ft_tetris;
 
 fn call_function (input: &str) {
     WRITER.lock().toggle_cmd(false);
@@ -248,6 +249,9 @@ fn call_function (input: &str) {
             }
             "halt" => {
                 ft_halt();
+            }
+            "tetris" => {
+                tetris::ft_tetris();
             }
             _ => {
                 WRITER.lock().toggle_cmd(true);
@@ -288,7 +292,7 @@ fn ft_halt() {
 fn ft_reboot() {
     println!("rebooting ... \n");
     unsafe {
-        io::outb(0x64, 0xfe);
+        outb(0x64, 0xfe);
         loop {}
     }
 }
