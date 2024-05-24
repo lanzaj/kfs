@@ -27,7 +27,7 @@ pub enum Color {
 
 const BUFFER_HEIGHT: usize = 25;
 const BUFFER_WIDTH: usize = 80;
-const LINE_NB: usize = 30;
+const LINE_NB: usize = 200;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]

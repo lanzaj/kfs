@@ -1,4 +1,4 @@
-Gerer le fait d'appeler des commandes quand enter
+
 Tableau pour historique commandes
 tetris
 cursor
@@ -8,11 +8,6 @@ cursor
 
 Idees cmd :
 dumpstack
-help
-reboot
 shutdown
-nyan_cat
-color [color]
-bg_color [color]
-echo [str]
+nyan cat
 print_memory [addr] [size]

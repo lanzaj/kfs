@@ -241,7 +241,7 @@ fn call_function (input: &str) {
                 ft_echo(input);
             }
             "stack" => {
-                ft_dump_stack();
+                ft_dump_stack(input);
             }
             "help" => {
                 ft_help();
@@ -364,27 +364,51 @@ extern "C" {
     static stack_top: u8;
 }
 
-fn ft_dump_stack() {
-    unsafe {
-        // panic!("BOT : {}    TOP:   {}", stack_bottom, stack_top);
-        let bottom = &stack_bottom as *const u8 as usize;
-        let top = &stack_top as *const u8 as usize;
-        println!("Stack from {:#x} to {:#x}", bottom, top);
-        let mut previous_value = 0xffffffff;
-        let mut pass = false;
-        // Iterate over the memory from bottom to top
-        for address in (bottom..top).step_by(4) {
-            // Read the value at the current address
-            let value = *(address as *const u32); // erreur d'affichage
-            if value != previous_value {
-                println!("{:#x}: {:#010x}", address, value);
-            } else if pass == false {
-                println!("[...]");
-                pass = true;
+fn ft_dump_stack(input: &str) {
+    if let Some(i) = input.find("stack ") { 
+        let size_str = input[i + 6..].trim_start();
+        if let Some(size_word) = size_str.split_whitespace().next() {
+            let size = atousize(size_word);
+            match size {
+                Some(num) => {
+                    unsafe {
+                        let bottom = &stack_bottom as *const u8 as usize;
+                        let top = &stack_top as *const u8 as usize;
+                        if num > top - bottom {
+                            WRITER.lock().toggle_cmd(true);
+                            println!("Value given bigger than kernel stack...");
+                            return ;
+                        }
+                        println!("Stack from {:#x} to {:#x}", bottom, bottom + num);
+                        print_mem_area(bottom as *mut i32, num);
+                        WRITER.lock().toggle_cmd(true);
+                        println!("-----end of stack segment------")
+                    }
+                }
+                None => {
+                    WRITER.lock().toggle_cmd(true);
+                    println!("Please provide a numeric value corresponding to the size you want to read.");
+                    return ;
+                }
             }
-            previous_value = value;
+        } else {
+            WRITER.lock().toggle_cmd(true);
+            println!("Please provide a numeric value corresponding to the size you want to read.");
         }
-        WRITER.lock().toggle_cmd(true);
-        println!("------end of stack------")
     }
+}
+
+fn atousize(s: &str) -> Option<usize> {
+    let mut result: usize = 0;
+    let chars = s.chars().peekable();
+
+    for c in chars {
+        if let Some(digit) = c.to_digit(10) {
+            result = result.checked_mul(10)?.checked_add(digit as usize)?;
+        } else {
+            return None;
+        }
+    }
+
+    Some(result)
 }

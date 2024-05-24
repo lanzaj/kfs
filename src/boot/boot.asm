@@ -31,5 +31,5 @@ error:
 
 section .bss
 stack_bottom:
-    resb 1000000
+    resb 1048576
 stack_top:
