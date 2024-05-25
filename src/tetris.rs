@@ -247,7 +247,7 @@ fn  draw_current_tetrominos(data: Data) {
     for y in 0..4 {
         for x in 0..4 {
             if rot_array[name_to_index(data.current)][data.rot][y][x] != 0 {
-                draw_cell((data.pos.x + x as i32)as usize, (data.pos.y + 4 - y as i32) as usize, data.col)
+                draw_cell((data.pos.x + x as i32)as usize, (data.pos.y + 4 - y as i32) as usize, data.color)
             }
         }
     }
@@ -278,7 +278,9 @@ struct Data {
     current: char,
     pos: Coord,
     rot: usize,
-    col: Color,
+    color: Color,
+    tick: usize,
+    input_cooldown: [usize; 255],
 }
 
 impl Data {
@@ -293,25 +295,27 @@ impl Data {
             current: 'T',
             pos: Coord { x: 3, y: 15 },
             rot: 0,
-            col: Color::Magenta,
+            color: Color::Magenta,
+            tick: 0,
+            input_cooldown: [0; 255],
         }
     }
 }
 
-use crate::io::read_data;
 
-fn  check_cell(data: Data) -> bool {
+fn  check_cell(data: &mut Data) -> bool {
     for y in 0..4 {
         for x in 0..4 {
-            if rot_array[name_to_index(data.current)][data.rot][y][x] != 0 &&
-                data.pos.x + x >= 0 &&
-                data.pos.x + x < 10 &&
-                data.pos.y + y >= 0 &&
-                data.pos.y + y < 22 {
-                    return true
+            if (rot_array[name_to_index(data.current)][data.rot][y][x] != 0) &&
+                (((data.pos.x + x as i32) < 0) || ((data.pos.x + x as i32) >= 10) ||
+                ((data.pos.y + 4 - y as i32) < 0) || ((data.pos.y + 4 - y as i32) >= 22) ||
+                data.board[(data.pos.x + x as i32) as usize][(data.pos.y + 4 - y as i32) as usize] != 0) {
+                
+                    return false;
             }
         }
     }
+    true
 }
 
 fn  handle_keyboard_input(data: &mut Data) {
@@ -321,18 +325,37 @@ fn  handle_keyboard_input(data: &mut Data) {
     }
     if data.scan_code == 37 {
         data.rot = (data.rot + 1) % 4;
+        if !check_cell(data) {
+            data.rot = (data.rot + 3) % 4;
+        }
     }
     if data.scan_code == 36 {
         data.rot = (data.rot + 3) % 4;
+        if !check_cell(data) {
+            data.rot = (data.rot + 1) % 4;
+        }
     }
     if data.scan_code == 30 {
-        if data.pos.x - 1 > 0 {
-            data.pos.x = data.pos.x - 1;
+        data.pos.x = data.pos.x - 1;
+        if !check_cell(data) {
+            data.pos.x = data.pos.x + 1;
         }
     }
     if data.scan_code == 32 {
-        if data.pos.x + 1 < 10 {
-            data.pos.x = data.pos.x + 1;
+        data.pos.x = data.pos.x + 1;
+        if !check_cell(data) {
+            data.pos.x = data.pos.x - 1;
+        }
+    }
+}
+
+fn  update_tick(data: &mut Data) {
+    data.tick = data.tick + 1;
+    if data.tick > 10 {
+        data.tick = 0;
+        data.pos.y = data.pos.y - 1;
+        if !check_cell(data) {
+            data.pos.y = data.pos.y + 1;
         }
     }
 }
@@ -347,11 +370,28 @@ fn  fill_fake_board(data: &mut Data) {
     data.board[5][0] = 7;
     data.board[6][0] = 7;
     data.board[5][1] = 7;
+
+    data.board[8][19] = 7;
 }
 
 fn  exit_tetris() {
     WRITER.lock().toggle_cmd(true);
     println!("See you soon!");       
+}
+
+use crate::io::try_read_data;
+
+fn read_input(data: &mut Data) {
+    let new_scan_code = try_read_data();
+    if new_scan_code != data.scan_code
+    || data.input_cooldown[new_scan_code as usize] > 16000 {
+        data.scan_code = new_scan_code;
+        data.input_cooldown[new_scan_code as usize] = 0;
+    }
+    else {
+        data.scan_code = 0;
+        data.input_cooldown[new_scan_code as usize] += 1;
+    }
 }
 
 pub fn ft_tetris() {
@@ -364,8 +404,9 @@ pub fn ft_tetris() {
             exit_tetris();
             break;
         }
-        data.scan_code = read_data();
+        read_input(&mut data);
         handle_keyboard_input(&mut data);
+        update_tick(&mut data);
         display_game(data);
     }
 }
