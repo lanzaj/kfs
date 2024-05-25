@@ -5,6 +5,40 @@ use core::str::EncodeUtf16;
 
 use crate::{print, println};
 
+////RAND
+use core::cell::Cell;
+
+// Define the SimpleRng struct
+pub struct SimpleRng {
+    state: Cell<u32>,
+}
+
+impl SimpleRng {
+    // Constructor to initialize the RNG with a seed
+    pub fn new(seed: u32) -> Self {
+        SimpleRng {
+            state: Cell::new(seed),
+        }
+    }
+
+    // Method to generate a random u32 number
+    pub fn next_u32(&self) -> u32 {
+        // Constants for LCG (32-bit)
+        let a: u32 = 1664525;
+        let c: u32 = 1013904223;
+
+        // Update the state
+        let state = self.state.get();
+        let next_state = state.wrapping_mul(a).wrapping_add(c);
+        self.state.set(next_state);
+
+        // Return the state as the random number
+        next_state
+    }
+}
+
+//// TIME
+
 pub fn bcd_to_binary(bcd: u8) -> u8 {
     ((bcd & 0xf0) >> 4) * 10 + (bcd & 0x0f)
 }
@@ -17,13 +51,11 @@ fn read_cmos(register: u8) -> u8 {
     }
 }
 
-fn get_rtc_time() -> (u8, u8, u8, u16) {
+fn get_rtc_time() -> (u8, u8, u8) {
     let seconds = bcd_to_binary(read_cmos(0x00));
     let minutes = bcd_to_binary(read_cmos(0x02));
     let hours = bcd_to_binary(read_cmos(0x04));
-    let milliseconds = bcd_to_binary(read_cmos(0x00)) as u16 * 1000 / 60;
-
-    (hours, minutes, seconds, milliseconds)
+    (hours, minutes, seconds)
 }
 
 fn get_rtc_date() -> (u8, u8, u8) {
@@ -35,19 +67,19 @@ fn get_rtc_date() -> (u8, u8, u8) {
 }
 
 fn time() {
-    let (hours, minutes, seconds, milliseconds) = get_rtc_time();
-    println!("{:02}:{:02}:{:02}.{:03}", hours, minutes, seconds, milliseconds);
+    let (hours, minutes, seconds) = get_rtc_time();
+    println!("{:02}:{:02}:{:02}", hours, minutes, seconds);
 }
 
 pub fn date() {
-    let (hours, minutes, seconds, milliseconds) = get_rtc_time();
+    let (hours, minutes, seconds) = get_rtc_time();
     let (year, month, day) = get_rtc_date();
 
     let full_year = 2000 + year as u16;
 
     println!(
-        "{:02}/{:02}/{:04} {:02}:{:02}:{:02}.{:03}",
-        day, month, full_year, hours, minutes, seconds, milliseconds
+        "{:02}/{:02}/{:04} {:02}:{:02}:{:02}",
+        day, month, full_year, hours, minutes, seconds
     );
 }
 
@@ -137,6 +169,11 @@ fn draw_empty_cell(x:usize, y: usize, color: Color) {
 }
 
 fn draw_next(tetraminos: char) {
+    for x in 14..18 {
+        for y in 17..19 {
+            draw_cell(x, y, Color::Black);
+        }
+    }
     match tetraminos {
         'I' => {
             draw_cell(14, 18, Color::Cyan);
@@ -163,10 +200,10 @@ fn draw_next(tetraminos: char) {
             draw_cell(16, 18,Color::Yellow);
         }
         'S' => {
-            draw_cell(15, 17, Color::LightGreen);
-            draw_cell(16, 17, Color::LightGreen);
-            draw_cell(16, 18,Color::LightGreen);
-            draw_cell(17, 18, Color::LightGreen);
+            draw_cell(15, 17, Color::Green);
+            draw_cell(16, 17, Color::Green);
+            draw_cell(16, 18,Color::Green);
+            draw_cell(17, 18, Color::Green);
         }
         'Z' => {
             draw_cell(15, 18, Color::Red);
@@ -191,17 +228,15 @@ fn draw_game_ui() {
     draw_rectangle(9, 21, 53, 71);
     draw_text();
     draw_bg();
-
-    // draw_scale();
-    
 }
+
 fn  draw_scale() {
     for i in 0..10 {
         if i % 2 == 0 {
             draw_cell(i, 0, Color::Cyan);
         }
         else {
-            draw_cell(i, 0, Color::LightGreen)
+            draw_cell(i, 0, Color::Green)
         }
     }
     for i in 0..22 {
@@ -209,7 +244,7 @@ fn  draw_scale() {
             draw_cell(0, i, Color::Cyan);
         }
         else {
-            draw_cell(0, i, Color::LightGreen)
+            draw_cell(0, i, Color::Green)
         }
     }
 }
@@ -222,7 +257,7 @@ fn  draw_board(data: Data) {
                 2 => draw_cell(x, y, Color::Blue),
                 3 => draw_cell(x, y, Color::Brown),
                 4 => draw_cell(x, y, Color::Yellow),
-                5 => draw_cell(x, y, Color::LightGreen),
+                5 => draw_cell(x, y, Color::Green),
                 6 => draw_cell(x, y, Color::Red),
                 7 => draw_cell(x, y, Color::Magenta),
                 _ => {
@@ -265,7 +300,6 @@ fn  display_game(data: Data) {
     draw_board(data);
     draw_nbr(3, 24, data.score, Color::White, Color::Black);
     draw_nbr(5, 24, data.level, Color::White, Color::Black);
-    draw_next(data.next);
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -300,11 +334,11 @@ impl Data {
             level: 1,
             score: 0,
             scan_code: 0,
-            next: 'T',
-            current: 'T',
+            next: 'I',
+            current: 'O',
             pos: Coord { x: 3, y: 15 },
             rot: 0,
-            color: Color::Magenta,
+            color: Color::Yellow,
             tick: 0,
             input_cooldown: [0; 255],
         }
@@ -319,7 +353,6 @@ fn  check_cell(data: &mut Data) -> bool {
                 (((data.pos.x + x as i32) < 0) || ((data.pos.x + x as i32) >= 10) ||
                 ((data.pos.y + 4 - y as i32) < 0) || ((data.pos.y + 4 - y as i32) >= 22) ||
                 data.board[(data.pos.x + x as i32) as usize][(data.pos.y + 4 - y as i32) as usize] != 0) {
-                
                     return false;
             }
         }
@@ -350,6 +383,12 @@ fn  handle_keyboard_input(data: &mut Data) {
             data.pos.x = data.pos.x + 1;
         }
     }
+    if data.scan_code == 31 {
+        data.pos.y -= 1;
+        if !check_cell(data) {
+            data.pos.y += 1;
+        }
+    }
     if data.scan_code == 32 {
         data.pos.x = data.pos.x + 1;
         if !check_cell(data) {
@@ -358,29 +397,91 @@ fn  handle_keyboard_input(data: &mut Data) {
     }
 }
 
-fn  update_tick(data: &mut Data) {
-    data.tick = data.tick + 1;
-    if data.tick > 10 {
-        data.tick = 0;
-        data.pos.y = data.pos.y - 1;
-        if !check_cell(data) {
-            data.pos.y = data.pos.y + 1;
+fn  clear_line(data: &mut Data, y_stop: usize) {
+    for y in y_stop..20 {
+        for x in 0..10 {
+            data.board[x][y] = data.board[x][y+1];
         }
     }
 }
 
-fn  fill_fake_board(data: &mut Data) {
-    data.board[0][0] = 1;
-    data.board[1][0] = 1;
-    data.board[2][0] = 1;
-    data.board[3][0] = 1;
+fn  clear_lines(data: &mut Data) {
+    print!("called");
+    let mut n_line_cleared = 0;
+    for y in 0..20 {
+        for x in 0..10 {
+            if data.board[x][y] == 0 {
+                break;
+            }
+            if x == 9 {
+                clear_line(data, y);
+                n_line_cleared += 1;
+            }
+        }
+    }
+    match n_line_cleared {
+        1 => data.score += 100 * data.level,
+        2 => data.score += 300 * data.level,
+        3 => data.score += 500 * data.level,
+        4 => data.score += 800 * data.level,
+        _ => return,
+    }
+}
 
-    data.board[4][0] = 7;
-    data.board[5][0] = 7;
-    data.board[6][0] = 7;
-    data.board[5][1] = 7;
+fn  finish_tetraminos(data: &mut Data, rng: &SimpleRng) {
+    for x in 0..10 {
+        for y in 0..20 {
+            if data.current_board[x][y] != 0 {
+                data.board[x][y] = data.current_board[x][y];
+            }
+        }
+    }
+    let tetraminos: [char; 7] = ['I', 'J', 'L', 'O', 'S', 'Z', 'T'];
+    data.current = data.next;
+    data.next = tetraminos[(rng.next_u32() % 7) as usize];
+    data.pos = Coord { x: 3, y: 15 };
+    data.rot = 0;
+    draw_next(data.next);
+    clear_lines(data);
+    match data.current {
+        'I' => data.color = Color::Cyan,
+        'J' => data.color = Color::Blue,
+        'L' => data.color = Color::Brown,
+        'O' => data.color = Color::Yellow,
+        'S' => data.color = Color::Green, 
+        'Z' => data.color = Color::Red, 
+        'T' => data.color = Color::Magenta, 
+        _ => {},
+    }
+}
 
-    data.board[8][19] = 7;
+fn  init_game(data: &mut Data, rng: &SimpleRng) {
+    let tetraminos: [char; 7] = ['I', 'J', 'L', 'O', 'S', 'Z', 'T'];
+    data.current = tetraminos[(rng.next_u32() % 7) as usize];
+    data.next = tetraminos[(rng.next_u32() % 7) as usize];
+    match data.current {
+        'I' => data.color = Color::Cyan,
+        'J' => data.color = Color::Blue,
+        'L' => data.color = Color::Brown,
+        'O' => data.color = Color::Yellow,
+        'S' => data.color = Color::Green, 
+        'Z' => data.color = Color::Red, 
+        'T' => data.color = Color::Magenta, 
+        _ => {},
+    }
+    draw_next(data.next);
+}
+
+fn  update_tick(data: &mut Data, rng: &SimpleRng) {
+    data.tick += 1;
+    if data.tick > 10 {
+        data.tick = 0;
+        data.pos.y -= 1;
+        if !check_cell(data) {
+            data.pos.y += 1;
+            finish_tetraminos(data, rng);
+        }
+    }
 }
 
 fn  exit_tetris() {
@@ -407,7 +508,9 @@ pub fn ft_tetris() {
     let mut data: Data = Data::new();
     clear_window();
     draw_game_ui();
-    fill_fake_board(&mut data);
+    let (hours, minutes, seconds) = get_rtc_time();
+    let rng = SimpleRng::new((minutes as u32* 100 + seconds as u32));
+    init_game(&mut data, &rng);
     loop {
         if data.end {
             exit_tetris();
@@ -415,7 +518,7 @@ pub fn ft_tetris() {
         }
         read_input(&mut data);
         handle_keyboard_input(&mut data);
-        update_tick(&mut data);
+        update_tick(&mut data, &rng);
         place_current_tetrominos(&mut data);
         display_game(data);
     }
