@@ -225,7 +225,14 @@ fn  draw_board(data: Data) {
                 5 => draw_cell(x, y, Color::LightGreen),
                 6 => draw_cell(x, y, Color::Red),
                 7 => draw_cell(x, y, Color::Magenta),
-                _ => draw_empty_cell(x, y, Color::DarkGray),
+                _ => {
+                    if data.current_board[x][y] != 0 {
+                        draw_cell(x, y, data.color);
+                    }
+                    else {
+                        draw_empty_cell(x, y, Color::DarkGray);
+                    }
+                },
             }
         }
     }
@@ -243,11 +250,12 @@ fn  name_to_index(c: char) -> usize {
         _ => 7,
     }
 }
-fn  draw_current_tetrominos(data: Data) {
+fn  place_current_tetrominos(data: &mut Data) {
+    data.current_board = [[0; 22]; 10];
     for y in 0..4 {
         for x in 0..4 {
             if rot_array[name_to_index(data.current)][data.rot][y][x] != 0 {
-                draw_cell((data.pos.x + x as i32)as usize, (data.pos.y + 4 - y as i32) as usize, data.color)
+                data.current_board[(data.pos.x + x as i32)as usize][(data.pos.y + 4 - y as i32) as usize] = rot_array[name_to_index(data.current)][data.rot][y][x];
             }
         }
     }
@@ -258,7 +266,6 @@ fn  display_game(data: Data) {
     draw_nbr(3, 24, data.score, Color::White, Color::Black);
     draw_nbr(5, 24, data.level, Color::White, Color::Black);
     draw_next(data.next);
-    draw_current_tetrominos(data);
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -270,6 +277,7 @@ struct Coord {
 #[derive(Debug, Clone, Copy)]
 struct Data {
     board: [[u8; 22]; 10],
+    current_board: [[u8; 22]; 10],
     end: bool,
     level: u32,
     score: u32,
@@ -287,6 +295,7 @@ impl Data {
     pub fn new() -> Self {
         Data {
             board: [[0; 22]; 10],
+            current_board: [[0; 22]; 10],
             end: false,
             level: 1,
             score: 0,
@@ -398,7 +407,7 @@ pub fn ft_tetris() {
     let mut data: Data = Data::new();
     clear_window();
     draw_game_ui();
-    //fill_fake_board(&mut data);
+    fill_fake_board(&mut data);
     loop {
         if data.end {
             exit_tetris();
@@ -407,6 +416,7 @@ pub fn ft_tetris() {
         read_input(&mut data);
         handle_keyboard_input(&mut data);
         update_tick(&mut data);
+        place_current_tetrominos(&mut data);
         display_game(data);
     }
 }
