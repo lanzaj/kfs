@@ -568,7 +568,7 @@ use crate::io::try_read_data;
 
 fn read_input(data: &mut Data) {
     let new_scan_code = try_read_data();
-    if data.input_cooldown[new_scan_code as usize] > 0 {
+    if data.input_cooldown[new_scan_code as usize] > 1 {
         data.scan_code = new_scan_code;
         data.input_cooldown[new_scan_code as usize] = 0;
     }
