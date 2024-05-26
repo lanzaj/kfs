@@ -169,6 +169,16 @@ fn draw_cell(x:usize, y: usize, color: Color) {
     }
 }
 
+
+fn draw_ghost_cell(x:usize, y: usize, color: Color) {
+    let col = x * 2 + 30;
+    let row = 22 - y;
+
+    for i in 0..2 {
+        draw_char(row, col + i, 0xb0, color, Color::Black);
+    }
+}
+
 fn draw_empty_cell(x:usize, y: usize, color: Color) {
     let col = x * 2 + 30;
     let row = 22 - y;
@@ -287,7 +297,12 @@ fn  draw_board(data: Data) {
                 7 => draw_cell(x, y, Color::Magenta),
                 _ => {
                     if data.current_board[x][y] != 0 {
-                        draw_cell(x, y, data.color);
+                        if data.current_board[x][y] > 10 {
+                            draw_ghost_cell(x, y, data.color);
+                        }
+                        else {
+                            draw_cell(x, y, data.color);
+                        }
                     }
                     else {
                         draw_empty_cell(x, y, Color::DarkGray);
@@ -311,10 +326,21 @@ fn  name_to_index(c: char) -> usize {
     }
 }
 fn  place_current_tetrominos(data: &mut Data) {
+    let save_pos_y = data.pos.y;
+
+    while check_cell(data) {
+        data.pos.y = data.pos.y - 1;
+    }
+    data.pos.y = data.pos.y + 1;
+
+    let pos_y_down = data.pos.y;
+    data.pos.y = save_pos_y;
+
     data.current_board = [[0; 22]; 10];
     for y in 0..4 {
         for x in 0..4 {
             if rot_array[name_to_index(data.current)][data.rot][y][x] != 0 {
+                data.current_board[(data.pos.x + x as i32)as usize][(pos_y_down + 4 - y as i32) as usize] = rot_array[name_to_index(data.current)][data.rot][y][x] + 10;
                 data.current_board[(data.pos.x + x as i32)as usize][(data.pos.y + 4 - y as i32) as usize] = rot_array[name_to_index(data.current)][data.rot][y][x];
             }
         }
@@ -461,6 +487,7 @@ fn  clear_lines(data: &mut Data) {
         }
         y += 1;
     }
+    data.level = data.total_line_cleared / 10 + 1;
     match n_line_cleared {
         1 => data.score += 100 * data.level,
         2 => data.score += 300 * data.level,
@@ -521,7 +548,7 @@ fn  init_game(data: &mut Data, rng: &SimpleRng) {
 
 fn  update_tick(data: &mut Data, rng: &SimpleRng) {
     data.tick += 1;
-    if data.tick > 10 {
+    if data.tick > 11 - data.level as usize {
         data.tick = 0;
         data.pos.y = data.pos.y - 1;
         if !check_cell(data) {
