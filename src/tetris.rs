@@ -230,6 +230,16 @@ fn draw_game_ui() {
     draw_bg();
 }
 
+fn  game_over(data: &mut Data) {
+    draw_rectangle(7, 15, 25, 54);
+    for row in 8..15 {
+        for col in 26..54 {
+            draw_char(row, col, ' ' as u8, Color::Black, Color::Black);
+        }
+    }
+    draw_str(9, 35, "GAME OVER", Color::Red, Color::Black);
+}
+
 fn  draw_scale() {
     for i in 0..10 {
         if i % 2 == 0 {
@@ -302,6 +312,7 @@ fn  display_game(data: Data) {
     draw_nbr(5, 24, data.level, Color::White, Color::Black);
 }
 
+
 #[derive(Debug, Clone, Copy)]
 struct Coord {
     x: i32,
@@ -312,7 +323,8 @@ struct Coord {
 struct Data {
     board: [[u8; 22]; 10],
     current_board: [[u8; 22]; 10],
-    end: bool,
+    exit: bool,
+    game_over: bool,
     level: u32,
     score: u32,
     total_line_cleared: u32,
@@ -331,7 +343,8 @@ impl Data {
         Data {
             board: [[0; 22]; 10],
             current_board: [[0; 22]; 10],
-            end: false,
+            exit: false,
+            game_over: false,
             level: 1,
             score: 0,
             total_line_cleared: 0,
@@ -365,7 +378,7 @@ fn  check_cell(data: &mut Data) -> bool {
 fn  handle_keyboard_input(data: &mut Data) {
     match data.scan_code {
         1 => {
-            data.end = true;
+            data.exit = true;
         },
         37 => {
             data.rot = (data.rot + 1) % 4;
@@ -450,6 +463,11 @@ fn  finish_tetraminos(data: &mut Data, rng: &SimpleRng) {
     data.pos = Coord { x: 3, y: 15 };
     data.rot = 0;
     draw_next(data.next);
+    if !check_cell(data) {
+        data.game_over = true;
+        game_over(data);
+        return;
+    }
     clear_lines(data);
     match data.current {
         'I' => data.color = Color::Cyan,
@@ -520,13 +538,16 @@ pub fn ft_tetris() {
     let rng = SimpleRng::new((minutes as u32* 100 + seconds as u32));
     init_game(&mut data, &rng);
     loop {
-        if data.end {
+        if data.exit {
             exit_tetris();
             break;
         }
         read_input(&mut data);
         handle_keyboard_input(&mut data);
         update_tick(&mut data, &rng);
+        if data.game_over {
+            break;
+        }
         place_current_tetrominos(&mut data);
         display_game(data);
     }
