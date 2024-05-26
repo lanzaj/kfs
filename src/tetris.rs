@@ -142,6 +142,14 @@ fn draw_text() {
     draw_str(9, 60, "Help", Color::White, Color::Black);
     draw_str(3, 11, "Score", Color::White, Color::Black);
     draw_str(5, 11, "Level", Color::White, Color::Black);
+
+    draw_str(12, 55, "Left         A", Color::White, Color::Black);
+    draw_str(13, 55, "Right        D", Color::White, Color::Black);
+    draw_str(14, 55, "Down         S", Color::White, Color::Black);
+    draw_str(15, 55, "Drop     Space", Color::White, Color::Black);
+    draw_str(16, 55, "Rot.L        J", Color::White, Color::Black);
+    draw_str(17, 55, "Rot.R        K", Color::White, Color::Black);
+    draw_str(18, 55, "Quit       Esc", Color::White, Color::Black);
 }
 
 fn draw_bg() {
@@ -223,7 +231,7 @@ fn draw_next(tetraminos: char) {
 
 fn draw_game_ui() {
     draw_rectangle(2, 23, 29, 50);
-    draw_rectangle(2, 6, 10, 26);
+    draw_rectangle(2, 6, 9, 26);
     draw_rectangle(2, 7, 53, 71);
     draw_rectangle(9, 21, 53, 71);
     draw_text();
@@ -231,13 +239,20 @@ fn draw_game_ui() {
 }
 
 fn  game_over(data: &mut Data) {
-    draw_rectangle(7, 15, 25, 54);
-    for row in 8..15 {
+    draw_rectangle(7, 17, 25, 54);
+    for row in 8..17 {
         for col in 26..54 {
             draw_char(row, col, ' ' as u8, Color::Black, Color::Black);
         }
     }
-    draw_str(9, 35, "GAME OVER", Color::Red, Color::Black);
+    draw_str(9, 36, "GAME OVER", Color::Red, Color::Black);
+    draw_str(11, 31, "Level............", Color::White, Color::Black);
+    draw_str(12, 31, "Lines............", Color::White, Color::Black);
+    draw_str(13, 31, "Score............", Color::White, Color::Black);
+    draw_str(15, 31, "Press Esc to quit", Color::White, Color::Black);
+    draw_nbr(11, 48, data.level, Color::White, Color::Black);
+    draw_nbr(12, 48, data.total_line_cleared, Color::White, Color::Black);
+    draw_nbr(13, 48, data.score, Color::White, Color::Black);
 }
 
 fn  draw_scale() {
@@ -410,6 +425,12 @@ fn  handle_keyboard_input(data: &mut Data) {
                 data.pos.x = data.pos.x - 1;
             }
         },
+        57 => {
+            while check_cell(data) {
+                data.pos.y = data.pos.y - 1;
+            }
+            data.pos.y = data.pos.y + 1;
+        },
         _ => {},
     }
     data.scan_code = 0;
@@ -543,13 +564,18 @@ pub fn ft_tetris() {
             break;
         }
         read_input(&mut data);
+        if data.game_over {
+            if data.scan_code == 1 {
+                data.exit = true;
+            }
+            continue;
+        }
         handle_keyboard_input(&mut data);
         update_tick(&mut data, &rng);
-        if data.game_over {
-            break;
+        if !data.game_over {
+            place_current_tetrominos(&mut data);
+            display_game(data);
         }
-        place_current_tetrominos(&mut data);
-        display_game(data);
     }
 }
 
