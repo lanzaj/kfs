@@ -315,6 +315,7 @@ struct Data {
     end: bool,
     level: u32,
     score: u32,
+    total_line_cleared: u32,
     scan_code: u8,
     next: char,
     current: char,
@@ -333,6 +334,7 @@ impl Data {
             end: false,
             level: 1,
             score: 0,
+            total_line_cleared: 0,
             scan_code: 0,
             next: 'I',
             current: 'O',
@@ -361,40 +363,43 @@ fn  check_cell(data: &mut Data) -> bool {
 }
 
 fn  handle_keyboard_input(data: &mut Data) {
-    if data.scan_code == 1 {
-        data.end = true;
-        return;
-    }
-    if data.scan_code == 37 {
-        data.rot = (data.rot + 1) % 4;
-        if !check_cell(data) {
-            data.rot = (data.rot + 3) % 4;
-        }
-    }
-    if data.scan_code == 36 {
-        data.rot = (data.rot + 3) % 4;
-        if !check_cell(data) {
+    match data.scan_code {
+        1 => {
+            data.end = true;
+        },
+        37 => {
             data.rot = (data.rot + 1) % 4;
-        }
-    }
-    if data.scan_code == 30 {
-        data.pos.x = data.pos.x - 1;
-        if !check_cell(data) {
-            data.pos.x = data.pos.x + 1;
-        }
-    }
-    if data.scan_code == 31 {
-        data.pos.y -= 1;
-        if !check_cell(data) {
-            data.pos.y += 1;
-        }
-    }
-    if data.scan_code == 32 {
-        data.pos.x = data.pos.x + 1;
-        if !check_cell(data) {
+            if !check_cell(data) {
+                data.rot = (data.rot + 3) % 4;
+            }
+        },
+        36 => {
+            data.rot = (data.rot + 3) % 4;
+            if !check_cell(data) {
+                data.rot = (data.rot + 1) % 4;
+            }
+        },
+        30 => {
             data.pos.x = data.pos.x - 1;
-        }
+            if !check_cell(data) {
+                data.pos.x = data.pos.x + 1;
+            }
+        },
+        31 => {
+            data.pos.y = data.pos.y - 1;
+            if !check_cell(data) {
+                data.pos.y = data.pos.y + 1;
+            }
+        },
+        32 => {
+            data.pos.x = data.pos.x + 1;
+            if !check_cell(data) {
+                data.pos.x = data.pos.x - 1;
+            }
+        },
+        _ => {},
     }
+    data.scan_code = 0;
 }
 
 fn  clear_line(data: &mut Data, y_stop: usize) {
@@ -406,18 +411,21 @@ fn  clear_line(data: &mut Data, y_stop: usize) {
 }
 
 fn  clear_lines(data: &mut Data) {
-    print!("called");
     let mut n_line_cleared = 0;
-    for y in 0..20 {
+    let mut y: i32 = 0;
+    while y < 22 {
         for x in 0..10 {
-            if data.board[x][y] == 0 {
+            if data.board[x][y as usize] == 0 {
                 break;
             }
             if x == 9 {
-                clear_line(data, y);
+                clear_line(data, y as usize);
                 n_line_cleared += 1;
+                data.total_line_cleared += 1;
+                y -= 1;
             }
         }
+        y += 1;
     }
     match n_line_cleared {
         1 => data.score += 100 * data.level,
@@ -476,9 +484,10 @@ fn  update_tick(data: &mut Data, rng: &SimpleRng) {
     data.tick += 1;
     if data.tick > 10 {
         data.tick = 0;
-        data.pos.y -= 1;
+        data.pos.y = data.pos.y - 1;
         if !check_cell(data) {
-            data.pos.y += 1;
+            data.pos.y = data.pos.y + 1;
+            place_current_tetrominos(data);
             finish_tetraminos(data, rng);
         }
     }
@@ -493,8 +502,7 @@ use crate::io::try_read_data;
 
 fn read_input(data: &mut Data) {
     let new_scan_code = try_read_data();
-    if new_scan_code != data.scan_code
-    || data.input_cooldown[new_scan_code as usize] > 16000 {
+    if data.input_cooldown[new_scan_code as usize] > 0 {
         data.scan_code = new_scan_code;
         data.input_cooldown[new_scan_code as usize] = 0;
     }
