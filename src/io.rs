@@ -17,6 +17,13 @@ pub fn read_data() -> u8 {
     unsafe { inb(PS2_DATA_PORT) }
 }
 
+pub fn try_read_data() -> u8 {
+    if (read_status() & 0x01) != 0 {
+        unsafe { return inb(PS2_DATA_PORT) }
+    }
+    return 0;
+}
+
 // Low-level I/O operations
 
 pub unsafe fn inb(port: u16) -> u8 {
