@@ -264,6 +264,9 @@ fn call_function (input: &str) {
             "gdt" => {
                 ft_gdt();
             }
+            "switch" => {
+                ft_switch_tab();
+            }
             _ => {
                 WRITER.lock().toggle_cmd(true);
                 println!("kfs: {}: command not found", cmd);
@@ -370,6 +373,13 @@ fn ft_gdt() {
     println!("-----end of gdt at 0x838------");
 }
 
+fn ft_switch_tab() {
+    WRITER.lock().toggle_cmd(true);
+    WRITER.lock().switch_tab();
+    println!("");
+
+}
+
 extern "C" {
     static stack_bottom: u8;
     static stack_top: u8;
@@ -420,6 +430,5 @@ fn atousize(s: &str) -> Option<usize> {
             return None;
         }
     }
-
     Some(result)
 }

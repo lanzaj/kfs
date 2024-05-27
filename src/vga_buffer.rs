@@ -99,12 +99,13 @@ struct Vgabuffer {
 }
 
 pub struct Writer {
-    column_position: usize,
+    column_position: [usize; 3],
     color_code: ColorCode,
     vga_buffer: &'static mut Vgabuffer,
-    lines: Vec,
-    scroll: usize,
+    lines: [Vec; 3],
+    scroll: [usize; 3],
     cmd: bool,
+    active_tab: usize,
 }
 
 impl Writer {
@@ -113,10 +114,10 @@ impl Writer {
         match byte {
             b'\n' => self.new_line(),
             b'\x08' => {
-                if self.column_position > 2 {
-                    self.column_position -= 1;
+                if self.column_position[self.active_tab] > 2 {
+                    self.column_position[self.active_tab] -= 1;
                     let row = BUFFER_HEIGHT - 1;
-                    let col = self.column_position;
+                    let col = self.column_position[self.active_tab];
                     let color_code = self.color_code;
                     self.vga_buffer.chars[row][col].write(ScreenChar{
                         ascii: ' ' as u8,
@@ -125,17 +126,17 @@ impl Writer {
                 }
             },
             byte => {
-                if self.column_position >= BUFFER_WIDTH {
+                if self.column_position[self.active_tab] >= BUFFER_WIDTH {
                     return;
                 }
                 let row = BUFFER_HEIGHT - 1;
-                let col = self.column_position;
+                let col = self.column_position[self.active_tab];
                 let color_code = self.color_code;
                 self.vga_buffer.chars[row][col].write(ScreenChar{
                     ascii: byte,
                     color: color_code,
                 });
-                self.column_position += 1;
+                self.column_position[self.active_tab] += 1;
             }
         }
     }
@@ -149,14 +150,14 @@ impl Writer {
         for col in 0..BUFFER_WIDTH {
             line[col] = self.vga_buffer.chars[row][col].read();
         }
-        self.lines.push_new_line(line);
+        self.lines[self.active_tab].push_new_line(line);
         self.clear_row(BUFFER_HEIGHT - 1);
         if self.cmd == true {
-            self.column_position = 2;
+            self.column_position[self.active_tab] = 2;
         } else {
-            self.column_position = 0;
+            self.column_position[self.active_tab] = 0;
         }
-        self.scroll = 0;
+        self.scroll[self.active_tab] = 0;
         self.update_vga_buffer();
         if self.cmd == true {
             self.cmd = false;
@@ -191,43 +192,125 @@ impl Writer {
     }
 
     pub fn scroll_up(&mut self) {
-        if self.lines.size > BUFFER_HEIGHT - 2 && self.scroll < self.lines.size - (BUFFER_HEIGHT - 2) {
-            self.scroll += 1;
+        if self.lines[self.active_tab].size > BUFFER_HEIGHT - 2 && self.scroll[self.active_tab] < self.lines[self.active_tab].size - (BUFFER_HEIGHT - 2) {
+            self.scroll[self.active_tab] += 1;
             self.update_vga_buffer();
         }
     }
 
     pub fn scroll_down(&mut self) {
-        if self.scroll > 0 {
-            self.scroll -= 1;
+        if self.scroll[self.active_tab] > 0 {
+            self.scroll[self.active_tab] -= 1;
             self.update_vga_buffer();
         }
     }
 
     fn update_vga_buffer(&mut self) {
-        // ligne de separation de la cmd line
-        for col in 0..(BUFFER_WIDTH) {
-            self.vga_buffer.chars[BUFFER_HEIGHT - 2][col].write(ScreenChar {
-                ascii: 0xc4,
-                color: ColorCode((Color::Black as u8) << 4 | (Color::LightBlue as u8)),
-            });
-        }
-        if self.cmd == true {
-            self.vga_buffer.chars[BUFFER_HEIGHT - 1][0].write(ScreenChar {
-                ascii: b'$',
-                color: ColorCode((Color::Black as u8) << 4 | (Color::LightBlue as u8)),
-            });
-            self.vga_buffer.chars[BUFFER_HEIGHT - 1][1].write(ScreenChar {
-                ascii: b'>',
-                color: ColorCode((Color::Black as u8) << 4 | (Color::LightBlue as u8)),
-            });
-        }
+        self.print_interface();
+        // for col in 0..(BUFFER_WIDTH) {
+        //     self.vga_buffer.chars[BUFFER_HEIGHT - 2][col].write(ScreenChar {
+        //         ascii: 0xc4,
+        //         color: ColorCode((Color::Black as u8) << 4 | (Color::LightBlue as u8)),
+        //     });
+        // }
+        // if self.cmd == true {
+        //     self.vga_buffer.chars[BUFFER_HEIGHT - 1][0].write(ScreenChar {
+        //         ascii: b'$',
+        //         color: ColorCode((Color::Black as u8) << 4 | (Color::LightBlue as u8)),
+        //     });
+        //     self.vga_buffer.chars[BUFFER_HEIGHT - 1][1].write(ScreenChar {
+        //         ascii: b'>',
+        //         color: ColorCode((Color::Black as u8) << 4 | (Color::LightBlue as u8)),
+        //     });
+        // }
         // nettoyer toutes les lignes de l'historique et les update
         for row in 0..(BUFFER_HEIGHT-2) {
             self.clear_row(row);
             for col in 0..(BUFFER_WIDTH) {
-                self.vga_buffer.chars[row][col].write(self.lines.buffer[(LINE_NB - (BUFFER_HEIGHT - 2) + row + self.lines.newest - self.scroll) % LINE_NB][col]);
+                self.vga_buffer.chars[row][col].write(self.lines[self.active_tab].buffer[(LINE_NB - (BUFFER_HEIGHT - 2) + row + self.lines[self.active_tab].newest - self.scroll[self.active_tab]) % LINE_NB][col]);
             }
+        }
+    }
+
+    fn print_interface(&mut self) {
+        let mut color = Color::LightBlue;
+        if self.active_tab == 1 {
+            color = Color::Red;
+        } else if self.active_tab == 2 {
+            color = Color::Green;
+        }
+        for col in 0..(BUFFER_WIDTH) {
+            self.vga_buffer.chars[BUFFER_HEIGHT - 2][col].write(ScreenChar {
+                ascii: 0xc4,
+                color: ColorCode((Color::Black as u8) << 4 | (color as u8)),
+            });
+        }
+        self.vga_buffer.chars[BUFFER_HEIGHT - 2][68].write(ScreenChar {
+            ascii: '/' as u8,
+            color: ColorCode((Color::Black as u8) << 4 | (color as u8)),
+        });
+        self.vga_buffer.chars[BUFFER_HEIGHT - 2][69].write(ScreenChar {
+            ascii: ' ' as u8,
+            color: ColorCode((Color::Black as u8) << 4 | (color as u8)),
+        });
+        if self.active_tab == 0 {
+            self.vga_buffer.chars[BUFFER_HEIGHT - 2][70].write(ScreenChar {
+                ascii: '1' as u8,
+                color: ColorCode((color as u8) << 4 | (Color::Black as u8)),
+            });
+        } else {
+            self.vga_buffer.chars[BUFFER_HEIGHT - 2][70].write(ScreenChar {
+                ascii: '1' as u8,
+                color: ColorCode((Color::Black as u8) << 4 | (color as u8)),
+            });
+        }
+        self.vga_buffer.chars[BUFFER_HEIGHT - 2][71].write(ScreenChar {
+            ascii: ' ' as u8,
+            color: ColorCode((Color::Black as u8) << 4 | (color as u8)),
+        });
+        if self.active_tab == 1 {
+            self.vga_buffer.chars[BUFFER_HEIGHT - 2][72].write(ScreenChar {
+                ascii: '2' as u8,
+                color: ColorCode((color as u8) << 4 | (Color::Black as u8)),
+            });
+        } else {
+            self.vga_buffer.chars[BUFFER_HEIGHT - 2][72].write(ScreenChar {
+                ascii: '2' as u8,
+                color: ColorCode((Color::Black as u8) << 4 | (color as u8)),
+            });
+        }
+        self.vga_buffer.chars[BUFFER_HEIGHT - 2][73].write(ScreenChar {
+            ascii: ' ' as u8,
+            color: ColorCode((Color::Black as u8) << 4 | (color as u8)),
+        });
+        if self.active_tab == 2 {
+            self.vga_buffer.chars[BUFFER_HEIGHT - 2][74].write(ScreenChar {
+                ascii: '3' as u8,
+                color: ColorCode((color as u8) << 4 | (Color::Black as u8)),
+            });
+        } else {
+            self.vga_buffer.chars[BUFFER_HEIGHT - 2][74].write(ScreenChar {
+                ascii: '3' as u8,
+                color: ColorCode((Color::Black as u8) << 4 | (color as u8)),
+            });
+        }
+        self.vga_buffer.chars[BUFFER_HEIGHT - 2][75].write(ScreenChar {
+            ascii: ' ' as u8,
+            color: ColorCode((Color::Black as u8) << 4 | (color as u8)),
+        });
+        self.vga_buffer.chars[BUFFER_HEIGHT - 2][76].write(ScreenChar {
+            ascii: '/' as u8,
+            color: ColorCode((Color::Black as u8) << 4 | (color as u8)),
+        });
+        if self.cmd == true {
+            self.vga_buffer.chars[BUFFER_HEIGHT - 1][0].write(ScreenChar {
+                ascii: b'$',
+                color: ColorCode((Color::Black as u8) << 4 | (color as u8)),
+            });
+            self.vga_buffer.chars[BUFFER_HEIGHT - 1][1].write(ScreenChar {
+                ascii: b'>',
+                color: ColorCode((Color::Black as u8) << 4 | (color as u8)),
+            });
         }
     }
 
@@ -243,10 +326,10 @@ impl Writer {
     }
 
     pub fn get_last_line(&mut self) -> [ScreenChar; 80] {
-        if self.lines.newest == 0 {
-            return self.lines.buffer[LINE_NB - 1];
+        if self.lines[self.active_tab].newest == 0 {
+            return self.lines[self.active_tab].buffer[LINE_NB - 1];
         }
-        self.lines.buffer[(self.lines.newest - 1) % LINE_NB]
+        self.lines[self.active_tab].buffer[(self.lines[self.active_tab].newest - 1) % LINE_NB]
     }
 
     pub fn toggle_cmd(&mut self, state: bool) {
@@ -259,10 +342,18 @@ impl Writer {
             color: self.color_code,
         }; BUFFER_WIDTH];
         for i in 0..LINE_NB {
-            self.lines.buffer[i] = empty_line;
+            self.lines[self.active_tab].buffer[i] = empty_line;
         }
-        self.lines.newest = 1;
-        self.lines.size = 1;
+        self.lines[self.active_tab].newest = 1;
+        self.lines[self.active_tab].size = 1;
+    }
+
+    pub fn switch_tab(&mut self) {
+        if self.active_tab < 2 {
+            self.active_tab += 1;
+        } else {
+            self.active_tab = 0;
+        }
     }
 }
 
@@ -271,12 +362,13 @@ use self::spin::Mutex;
 
 lazy_static! {
     pub static ref WRITER: Mutex<Writer> = Mutex::new(Writer {
-        column_position: 0,
+        column_position: [0; 3],
         color_code: ColorCode::new(Color::Yellow, Color::Blue),
         vga_buffer: unsafe { &mut *(0xb8000 as *mut Vgabuffer) },
-        lines: Vec::new(),
-        scroll: 0,
+        lines: [Vec::new(), Vec::new(), Vec::new()],
+        scroll: [0; 3],
         cmd: false,
+        active_tab: 0,
     });
 }
 

@@ -2,8 +2,6 @@ extern crate lazy_static;
 
 use core::arch::asm;
 
-use println;
-
 extern {
     fn load_segment_registers();
 }
