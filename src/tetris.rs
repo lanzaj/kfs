@@ -535,7 +535,14 @@ fn  update_tick(data: &mut Data, rng: &SimpleRng) {
         data.time = get_rtc_time();
     }
     data.tick += 1;
-    if data.tick > data.ticks_per_seconds - ((data.level as usize % 14) * data.ticks_per_seconds / 15)  {
+    let mut speed = 0;
+    if data.level >= 15 {
+        speed = data.ticks_per_seconds - (29 * data.ticks_per_seconds as u32 / 30) as usize;
+    }
+    else {
+        speed = data.ticks_per_seconds - ((data.level + 14) * data.ticks_per_seconds as u32 / 30) as usize;
+    }
+    if data.tick > speed {
         data.tick = 0;
         data.pos.y = data.pos.y - 1;
         if !check_cell(data) {

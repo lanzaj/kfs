@@ -422,32 +422,32 @@ pub fn disable_cursor() {
 
 pub fn print_welcome_screen() {
     disable_cursor();
-//     print!(
-// "/* ************************************************************************** */
-// /*                                                                            */
-// /*                                                        :::      ::::::::   */
-// /*      kfs                                             :+:      :+:    :+:   */
-// /*                                                    +:+ +:+         +:+     */
-// /*   By: tgrasset and jlanza                        +#+  +:+       +#+        */
-// /*                                                +#+#+#+#+#+   +#+           */
-// /*                                                     #+#    #+#             */
-// /*                                                    ###   ########.fr       */
-// /*                                                                            */
-// /* ************************************************************************** */");
+    print!(
+"/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*      kfs                                             :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: tgrasset and jlanza                        +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*                                                     #+#    #+#             */
+/*                                                    ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */");
     WRITER.lock().change_color(Color::White, Color::Black);
     println!("");
-//     println!(
-// "Welcome to our useless kernel !!!
-// It can't do much for now and probably never will
-// But here are a few commands you can use: 
+    println!(
+"Welcome to our useless kernel !!!
+It can't do much for now and probably never will
+But here are a few commands you can use: 
  
-// help    : This is more or less what you're seeing right now !
-// echo    : Prints something on the screen, WOW ! <...args>
-// stack   : Prints the stack
-// reboot  : Reboots the machine
-// halt    : Halts the CPU (Why would you do that?)
-// color   : Changes the writing color <...arg : Color>
-// There might be other hidden features...");
+help    : This is more or less what you're seeing right now !
+echo    : Prints something on the screen, WOW ! <...args>
+stack   : Prints the stack
+reboot  : Reboots the machine
+halt    : Halts the CPU (Why would you do that?)
+color   : Changes the writing color <...arg : Color>
+There might be other hidden features...");
     WRITER.lock().toggle_cmd(true);
     println!("");
 }
