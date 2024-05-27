@@ -1,38 +1,30 @@
 const CMOS_ADDRESS: u16 = 0x70;
 const CMOS_DATA: u16 = 0x71;
 
-use core::str::EncodeUtf16;
-
-use crate::{print, println};
+use crate::println;
 
 ////RAND
 use core::cell::Cell;
 
-// Define the SimpleRng struct
 pub struct SimpleRng {
     state: Cell<u32>,
 }
 
 impl SimpleRng {
-    // Constructor to initialize the RNG with a seed
     pub fn new(seed: u32) -> Self {
         SimpleRng {
             state: Cell::new(seed),
         }
     }
 
-    // Method to generate a random u32 number
     pub fn next_u32(&self) -> u32 {
-        // Constants for LCG (32-bit)
         let a: u32 = 1664525;
         let c: u32 = 1013904223;
 
-        // Update the state
         let state = self.state.get();
         let next_state = state.wrapping_mul(a).wrapping_add(c);
         self.state.set(next_state);
 
-        // Return the state as the random number
         next_state
     }
 }
@@ -64,23 +56,6 @@ fn get_rtc_date() -> (u8, u8, u8) {
     let day = bcd_to_binary(read_cmos(0x07));
 
     (year, month, day)
-}
-
-fn time() {
-    let (hours, minutes, seconds) = get_rtc_time();
-    println!("{:02}:{:02}:{:02}", hours, minutes, seconds);
-}
-
-pub fn date() {
-    let (hours, minutes, seconds) = get_rtc_time();
-    let (year, month, day) = get_rtc_date();
-
-    let full_year = 2000 + year as u16;
-
-    println!(
-        "{:02}/{:02}/{:04} {:02}:{:02}:{:02}",
-        day, month, full_year, hours, minutes, seconds
-    );
 }
 
 ///////////////////
@@ -339,9 +314,9 @@ fn  place_current_tetrominos(data: &mut Data) {
     data.current_board = [[0; 22]; 10];
     for y in 0..4 {
         for x in 0..4 {
-            if rot_array[name_to_index(data.current)][data.rot][y][x] != 0 {
-                data.current_board[(data.pos.x + x as i32)as usize][(pos_y_down + 4 - y as i32) as usize] = rot_array[name_to_index(data.current)][data.rot][y][x] + 10;
-                data.current_board[(data.pos.x + x as i32)as usize][(data.pos.y + 4 - y as i32) as usize] = rot_array[name_to_index(data.current)][data.rot][y][x];
+            if ROT_ARRAY[name_to_index(data.current)][data.rot][y][x] != 0 {
+                data.current_board[(data.pos.x + x as i32)as usize][(pos_y_down + 4 - y as i32) as usize] = ROT_ARRAY[name_to_index(data.current)][data.rot][y][x] + 10;
+                data.current_board[(data.pos.x + x as i32)as usize][(data.pos.y + 4 - y as i32) as usize] = ROT_ARRAY[name_to_index(data.current)][data.rot][y][x];
             }
         }
     }
@@ -376,7 +351,7 @@ struct Data {
     rot: usize,
     color: Color,
     tick: usize,
-    input_cooldown: [usize; 255],
+    ticks_per_seconds: usize,
 }
 
 impl Data {
@@ -396,7 +371,7 @@ impl Data {
             rot: 0,
             color: Color::Yellow,
             tick: 0,
-            input_cooldown: [0; 255],
+            ticks_per_seconds: 300,
         }
     }
 }
@@ -405,7 +380,7 @@ impl Data {
 fn  check_cell(data: &mut Data) -> bool {
     for y in 0..4 {
         for x in 0..4 {
-            if (rot_array[name_to_index(data.current)][data.rot][y][x] != 0) &&
+            if (ROT_ARRAY[name_to_index(data.current)][data.rot][y][x] != 0) &&
                 (((data.pos.x + x as i32) < 0) || ((data.pos.x + x as i32) >= 10) ||
                 ((data.pos.y + 4 - y as i32) < 0) || ((data.pos.y + 4 - y as i32) >= 22) ||
                 data.board[(data.pos.x + x as i32) as usize][(data.pos.y + 4 - y as i32) as usize] != 0) {
@@ -421,37 +396,37 @@ fn  handle_keyboard_input(data: &mut Data) {
         1 => {
             data.exit = true;
         },
-        37 => {
+        37 => { //37-165
             data.rot = (data.rot + 1) % 4;
             if !check_cell(data) {
                 data.rot = (data.rot + 3) % 4;
             }
         },
-        36 => {
+        36 => { //36-164
             data.rot = (data.rot + 3) % 4;
             if !check_cell(data) {
                 data.rot = (data.rot + 1) % 4;
             }
         },
-        30 => {
+        30 => { //30-158
             data.pos.x = data.pos.x - 1;
             if !check_cell(data) {
                 data.pos.x = data.pos.x + 1;
             }
         },
-        31 => {
+        31 => { //31-159
             data.pos.y = data.pos.y - 1;
             if !check_cell(data) {
                 data.pos.y = data.pos.y + 1;
             }
         },
-        32 => {
+        32 => { //32-160
             data.pos.x = data.pos.x + 1;
             if !check_cell(data) {
                 data.pos.x = data.pos.x - 1;
             }
         },
-        57 => {
+        57 | 17 => { //57-185
             while check_cell(data) {
                 data.pos.y = data.pos.y - 1;
             }
@@ -548,7 +523,7 @@ fn  init_game(data: &mut Data, rng: &SimpleRng) {
 
 fn  update_tick(data: &mut Data, rng: &SimpleRng) {
     data.tick += 1;
-    if data.tick > 11 - data.level as usize {
+    if data.tick > data.ticks_per_seconds - (data.level as usize * data.ticks_per_seconds / 30)  {
         data.tick = 0;
         data.pos.y = data.pos.y - 1;
         if !check_cell(data) {
@@ -567,15 +542,7 @@ fn  exit_tetris() {
 use crate::io::try_read_data;
 
 fn read_input(data: &mut Data) {
-    let new_scan_code = try_read_data();
-    if data.input_cooldown[new_scan_code as usize] > 1 {
-        data.scan_code = new_scan_code;
-        data.input_cooldown[new_scan_code as usize] = 0;
-    }
-    else {
-        data.scan_code = 0;
-        data.input_cooldown[new_scan_code as usize] += 1;
-    }
+    data.scan_code = try_read_data();
 }
 
 pub fn ft_tetris() {
@@ -583,7 +550,7 @@ pub fn ft_tetris() {
     clear_window();
     draw_game_ui();
     let (hours, minutes, seconds) = get_rtc_time();
-    let rng = SimpleRng::new((minutes as u32* 100 + seconds as u32));
+    let rng = SimpleRng::new(minutes as u32* 100 + seconds as u32);
     init_game(&mut data, &rng);
     loop {
         if data.exit {
@@ -606,7 +573,7 @@ pub fn ft_tetris() {
     }
 }
 
-const rot_array: [[[[u8; 4]; 4]; 4]; 7] = [
+const ROT_ARRAY: [[[[u8; 4]; 4]; 4]; 7] = [
         [ // I
             [
                 [0, 0, 0, 0],
