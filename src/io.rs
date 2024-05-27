@@ -261,6 +261,9 @@ fn call_function (input: &str) {
             "clear" => {
                 ft_clear();
             }
+            "gdt" => {
+                ft_gdt();
+            }
             _ => {
                 WRITER.lock().toggle_cmd(true);
                 println!("kfs: {}: command not found", cmd);
@@ -293,6 +296,7 @@ fn ft_help() {
     println!("color   : Changes the writing color <...arg : Color>");
     println!("42      : Prints 42 for kfs1's subject");
     println!("clear   : Clears the screen");
+    println!("gdt     : Prints the Global Descriptor Table's memory space");
     WRITER.lock().toggle_cmd(true);
     println!("There might be other hidden features...");
 
@@ -359,6 +363,13 @@ fn ft_echo(input: &str) {
     }
 }
 
+fn ft_gdt() {
+    println!("Global Descriptor Table (located at 0x800)");
+    print_mem_area(0x800 as *mut i32, 16);
+    WRITER.lock().toggle_cmd(true);
+    println!("-----end of gdt at 0x838------");
+}
+
 extern "C" {
     static stack_bottom: u8;
     static stack_top: u8;
@@ -382,7 +393,7 @@ fn ft_dump_stack(input: &str) {
                         println!("Stack from {:#x} to {:#x}", bottom, bottom + num);
                         print_mem_area(bottom as *mut i32, num);
                         WRITER.lock().toggle_cmd(true);
-                        println!("-----end of stack segment------")
+                        println!("-----end of stack segment------");
                     }
                 }
                 None => {

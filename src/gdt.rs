@@ -41,8 +41,8 @@ impl GdtEntry {
 pub fn init_gdt() {
     let gdt: [GdtEntry; 7] = [
         GdtEntry::new(0x0, 0x0, 0x0, 0x0),          // NULL
-        GdtEntry::new(0x0, 0xFFFFF, 0x9A, 0xCF),    // Kernel Code
-        GdtEntry::new(0x0, 0xFFFFF, 0x92, 0xCF),    // Kernel Data
+        GdtEntry::new(0x0, 0xFFFFF, 0x9B, 0xCF),    // Kernel Code
+        GdtEntry::new(0x0, 0xFFFFF, 0x93, 0xCF),    // Kernel Data
         GdtEntry::new(0x0, 0x0, 0x98, 0xCF),        // Kernel Stack
         GdtEntry::new(0x0, 0xFFFFF, 0xFA, 0xCF),    // User Code
         GdtEntry::new(0x0, 0xFFFFF, 0xF2, 0xCF),    // User Data
@@ -64,7 +64,5 @@ pub fn init_gdt() {
         );
         load_segment_registers();
     }
-    // println!("{:x}", GDT.as_ptr() as u32);
-    // print_mem_area(0x00158014 as *mut i32, 92);
 }
 
