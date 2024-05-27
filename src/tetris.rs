@@ -351,7 +351,9 @@ struct Data {
     rot: usize,
     color: Color,
     tick: usize,
+    counting_ticks: usize,
     ticks_per_seconds: usize,
+    time: (u8, u8, u8),
 }
 
 impl Data {
@@ -371,7 +373,9 @@ impl Data {
             rot: 0,
             color: Color::Yellow,
             tick: 0,
+            counting_ticks: 0,
             ticks_per_seconds: 300,
+            time: (0, 0, 0),
         }
     }
 }
@@ -522,8 +526,16 @@ fn  init_game(data: &mut Data, rng: &SimpleRng) {
 }
 
 fn  update_tick(data: &mut Data, rng: &SimpleRng) {
+    if data.time == get_rtc_time() {
+        data.counting_ticks += 1;
+    }
+    else {
+        data.ticks_per_seconds = data.counting_ticks;
+        data.counting_ticks = 0;
+        data.time = get_rtc_time();
+    }
     data.tick += 1;
-    if data.tick > data.ticks_per_seconds - (data.level as usize * data.ticks_per_seconds / 30)  {
+    if data.tick > data.ticks_per_seconds - ((data.level as usize % 14) * data.ticks_per_seconds / 15)  {
         data.tick = 0;
         data.pos.y = data.pos.y - 1;
         if !check_cell(data) {
@@ -545,6 +557,12 @@ fn read_input(data: &mut Data) {
     data.scan_code = try_read_data();
 }
 
+fn  wait_start_of_second(data: &mut Data) {
+    let (a, b, c) = get_rtc_time();
+    while (a, b, c) == get_rtc_time() {}
+    data.time = get_rtc_time();
+}
+
 pub fn ft_tetris() {
     let mut data: Data = Data::new();
     clear_window();
@@ -552,6 +570,7 @@ pub fn ft_tetris() {
     let (hours, minutes, seconds) = get_rtc_time();
     let rng = SimpleRng::new(minutes as u32* 100 + seconds as u32);
     init_game(&mut data, &rng);
+    wait_start_of_second(&mut data);
     loop {
         if data.exit {
             exit_tetris();
