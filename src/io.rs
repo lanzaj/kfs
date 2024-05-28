@@ -48,15 +48,15 @@ pub unsafe fn outb(port: u16, value: u8) {
 
 
 pub fn handle_keyboard_input(scan_code: u8) {
-    if scan_code == 26 {
+    if scan_code == 72 {
         vga_buffer::WRITER.lock().scroll_up();
         return;
     }
-    if scan_code == 27 {
+    if scan_code == 80 {
         vga_buffer::WRITER.lock().scroll_down();
         return;
     }
-    // println!("Scan code: {}", scan_code);
+    //println!("Scan code: {}", scan_code);
     static mut SHIFT : u8 = 0;
     static mut CAPS : u8 = 0;
     if scan_code == 42 || scan_code == 54 {
@@ -271,8 +271,17 @@ fn call_function (input: &str) {
             "gdt" => {
                 ft_gdt();
             }
-            "switch" => {
-                ft_switch_tab();
+            "s" => {
+                ft_switch_tab(0);
+            }
+            "1" => {
+                ft_switch_tab(1);
+            }
+            "2" => {
+                ft_switch_tab(2);
+            }
+            "3" => {
+                ft_switch_tab(3);
             }
             _ => {
                 WRITER.lock().toggle_cmd(true);
@@ -307,6 +316,7 @@ fn ft_help() {
     println!("42      : Prints 42 for kfs1's subject");
     println!("clear   : Clears the screen");
     println!("gdt     : Prints the Global Descriptor Table's memory space");
+    println!("s/1/2/3 : Switch tab");
     WRITER.lock().toggle_cmd(true);
     println!("There might be other hidden features...");
 
@@ -380,9 +390,9 @@ fn ft_gdt() {
     println!("-----end of gdt at 0x838------");
 }
 
-fn ft_switch_tab() {
+fn ft_switch_tab(n: usize) {
+    WRITER.lock().switch_tab(n);
     WRITER.lock().toggle_cmd(true);
-    WRITER.lock().switch_tab();
     println!("");
 
 }
