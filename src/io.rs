@@ -62,7 +62,6 @@ pub fn handle_keyboard_input(scan_code: u8) {
     if scan_code == 77 {
         vga_buffer::WRITER.lock().move_cursor(1);
     }
-    // println!("Scan code: {}", scan_code);
     static mut SHIFT : u8 = 0;
     static mut CAPS : u8 = 0;
     if scan_code == 42 || scan_code == 54 {
