@@ -50,14 +50,6 @@ fn get_rtc_time() -> (u8, u8, u8) {
     (hours, minutes, seconds)
 }
 
-fn get_rtc_date() -> (u8, u8, u8) {
-    let year = bcd_to_binary(read_cmos(0x09));
-    let month = bcd_to_binary(read_cmos(0x08));
-    let day = bcd_to_binary(read_cmos(0x07));
-
-    (year, month, day)
-}
-
 ///////////////////
 
 use crate::vga_buffer::{ColorCode, Color, WRITER};
@@ -238,25 +230,6 @@ fn  game_over(data: &mut Data) {
     draw_nbr(11, 48, data.level, Color::White, Color::Black);
     draw_nbr(12, 48, data.total_line_cleared, Color::White, Color::Black);
     draw_nbr(13, 48, data.score, Color::White, Color::Black);
-}
-
-fn  draw_scale() {
-    for i in 0..10 {
-        if i % 2 == 0 {
-            draw_cell(i, 0, Color::Cyan);
-        }
-        else {
-            draw_cell(i, 0, Color::Green)
-        }
-    }
-    for i in 0..22 {
-        if i % 2 == 0 {
-            draw_cell(0, i, Color::Cyan);
-        }
-        else {
-            draw_cell(0, i, Color::Green)
-        }
-    }
 }
 
 fn  draw_board(data: Data) {
@@ -535,7 +508,7 @@ fn  update_tick(data: &mut Data, rng: &SimpleRng) {
         data.time = get_rtc_time();
     }
     data.tick += 1;
-    let mut speed = 0;
+    let speed: usize;
     if data.level >= 15 {
         speed = data.ticks_per_seconds - (29 * data.ticks_per_seconds as u32 / 30) as usize;
     }
@@ -574,7 +547,7 @@ pub fn ft_tetris() {
     let mut data: Data = Data::new();
     clear_window();
     draw_game_ui();
-    let (hours, minutes, seconds) = get_rtc_time();
+    let (_ , minutes, seconds) = get_rtc_time();
     let rng = SimpleRng::new(minutes as u32* 100 + seconds as u32);
     init_game(&mut data, &rng);
     wait_start_of_second(&mut data);

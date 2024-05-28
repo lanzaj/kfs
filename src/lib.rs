@@ -1,4 +1,4 @@
-#![feature(lang_items, asm, naked_functions, core_intrinsics)]
+#![feature(naked_functions)]
 #![no_std]
 #![no_main]
 
@@ -13,8 +13,6 @@ use core::panic::PanicInfo;
 pub extern fn k_main() {
     vga_buffer::print_welcome_screen();
     gdt::init_gdt();
-    // dump_stack();
-    // print_mem_area(0x800 as *mut i32, 10);
     loop{
         let scan_code = read_data();
         handle_keyboard_input(scan_code);
@@ -79,16 +77,4 @@ fn print_mem_line(addr: *mut i32) {
     }
 }
 
-use core::arch::asm;
-
 use io::{handle_keyboard_input, read_data};
-
-use crate::vga_buffer::{disable_cursor, WRITER};
-fn dump_stack() {
-    let esp: usize;
-	unsafe {
-        asm!("mov {}, esp", out(reg) esp, options(nomem, nostack));
-	}
-	println!("esp: {:08x}", esp);
-    print_mem_area(esp as *mut i32, 56);
-}

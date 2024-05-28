@@ -1,9 +1,9 @@
-use core::{arch::asm, panic};
+use core::arch::asm;
 
 use println;
 use print;
 
-use crate::{dump_stack, print_mem_area, print_mem_line, tetris, vga_buffer::{self, Color, WRITER}};
+use crate::{print_mem_area, tetris, vga_buffer::{self, Color, WRITER}};
 
 const PS2_DATA_PORT: u16 = 0x60;
 const PS2_STATUS_PORT: u16 = 0x64;
@@ -48,13 +48,19 @@ pub unsafe fn outb(port: u16, value: u8) {
 
 
 pub fn handle_keyboard_input(scan_code: u8) {
-    if scan_code == 26 {
+    if scan_code == 72 {
         vga_buffer::WRITER.lock().scroll_up();
         return;
     }
-    if scan_code == 27 {
+    if scan_code == 80 {
         vga_buffer::WRITER.lock().scroll_down();
         return;
+    }
+    if scan_code == 75 {
+        vga_buffer::WRITER.lock().move_cursor(-1);
+    }
+    if scan_code == 77 {
+        vga_buffer::WRITER.lock().move_cursor(1);
     }
     // println!("Scan code: {}", scan_code);
     static mut SHIFT : u8 = 0;
@@ -207,7 +213,6 @@ pub fn handle_keyboard_input(scan_code: u8) {
         else {
             print!("{}",KBD_US_MAJ[scan_code as usize]);
         }
-        static mut FIRST: bool = true;
         if scan_code == 28 {
             let cmd = WRITER.lock().get_last_line();
             let mut tmp: [u8; 80] = [0; 80];
@@ -233,8 +238,6 @@ pub fn handle_keyboard_input(scan_code: u8) {
         }
     }
 }
-
-use tetris::ft_tetris;
 
 fn call_function (input: &str) {
     WRITER.lock().toggle_cmd(false);
@@ -271,8 +274,17 @@ fn call_function (input: &str) {
             "gdt" => {
                 ft_gdt();
             }
-            "switch" => {
-                ft_switch_tab();
+            "s" => {
+                ft_switch_tab(0);
+            }
+            "1" => {
+                ft_switch_tab(1);
+            }
+            "2" => {
+                ft_switch_tab(2);
+            }
+            "3" => {
+                ft_switch_tab(3);
             }
             _ => {
                 WRITER.lock().toggle_cmd(true);
@@ -307,6 +319,7 @@ fn ft_help() {
     println!("42      : Prints 42 for kfs1's subject");
     println!("clear   : Clears the screen");
     println!("gdt     : Prints the Global Descriptor Table's memory space");
+    println!("s/1/2/3 : Switch tab");
     WRITER.lock().toggle_cmd(true);
     println!("There might be other hidden features...");
 
@@ -380,9 +393,9 @@ fn ft_gdt() {
     println!("-----end of gdt at 0x838------");
 }
 
-fn ft_switch_tab() {
+fn ft_switch_tab(n: usize) {
+    WRITER.lock().switch_tab(n);
     WRITER.lock().toggle_cmd(true);
-    WRITER.lock().switch_tab();
     println!("");
 
 }

@@ -106,6 +106,7 @@ pub struct Writer {
     scroll: [usize; 3],
     cmd: bool,
     active_tab: usize,
+    behind_cursor: ScreenChar
 }
 
 impl Writer {
@@ -118,11 +119,19 @@ impl Writer {
                     self.column_position[self.active_tab] -= 1;
                     let row = BUFFER_HEIGHT - 1;
                     let col = self.column_position[self.active_tab];
-                    let color_code = self.color_code;
-                    self.vga_buffer.chars[row][col].write(ScreenChar{
+                    if self.vga_buffer.chars[row][0].read().ascii == b'$' {
+                        for i in col..(BUFFER_WIDTH - 1) {
+                            self.vga_buffer.chars[row][i].write(ScreenChar{
+                                ascii: self.vga_buffer.chars[row][i + 1].read().ascii as u8,
+                                color: self.color_code,
+                            });
+                        }
+                    }
+                    self.vga_buffer.chars[row][BUFFER_WIDTH - 1].write(ScreenChar{
                         ascii: ' ' as u8,
-                        color: color_code,
+                        color: self.color_code,
                     });
+                    self.update_cursor(col);
                 }
             },
             byte => {
@@ -132,12 +141,55 @@ impl Writer {
                 let row = BUFFER_HEIGHT - 1;
                 let col = self.column_position[self.active_tab];
                 let color_code = self.color_code;
+                if self.vga_buffer.chars[row][0].read().ascii == b'$' {
+                    for i in ((col + 1)..(BUFFER_WIDTH - 1)).rev() {
+                        self.vga_buffer.chars[row][i].write(ScreenChar{
+                            ascii: self.vga_buffer.chars[row][i - 1].read().ascii as u8,
+                            color: self.color_code,
+                        });
+                    }
+                }
                 self.vga_buffer.chars[row][col].write(ScreenChar{
                     ascii: byte,
                     color: color_code,
                 });
                 self.column_position[self.active_tab] += 1;
+                if self.column_position[self.active_tab] < BUFFER_WIDTH {
+                    self.update_cursor(self.column_position[self.active_tab]);
+                }
             }
+        }
+    }
+
+    fn update_cursor(&mut self, position: usize) {
+        let row = BUFFER_HEIGHT - 1;
+        self.behind_cursor = self.vga_buffer.chars[row][position].read();
+        let cursor = match self.active_tab {
+            0 => {ScreenChar { ascii: self.behind_cursor.ascii, color: ColorCode((Color::LightBlue as u8) << 4 | (Color::Black as u8)), }},
+            1 => {ScreenChar { ascii: self.behind_cursor.ascii, color: ColorCode((Color::Red as u8) << 4 | (Color::Black as u8)), }},
+            2 => {ScreenChar { ascii: self.behind_cursor.ascii, color: ColorCode((Color::Green as u8) << 4 | (Color::Black as u8)), }},
+            _ => {ScreenChar { ascii: self.behind_cursor.ascii, color: ColorCode((Color::Black as u8) << 4 | (Color::Black as u8)), }}
+        };
+        self.vga_buffer.chars[row][position].write(cursor);
+    }
+
+    pub fn move_cursor(&mut self, offset: i8) {
+        let row = BUFFER_HEIGHT - 1;
+        let col = self.column_position[self.active_tab];
+        if col > BUFFER_WIDTH - 2 && offset > 0 {
+            return;
+        }
+        if col < BUFFER_WIDTH {
+            self.vga_buffer.chars[row][col].write(self.behind_cursor);
+        }
+        if offset > 0 && col < BUFFER_WIDTH {
+            self.column_position[self.active_tab] += 1;
+        }
+        if offset < 0 && col > 2 && col <= BUFFER_WIDTH {
+            self.column_position[self.active_tab] -= 1;
+        }
+        if self.column_position[self.active_tab] < BUFFER_WIDTH {
+            self.update_cursor(self.column_position[self.active_tab]);
         }
     }
 
@@ -148,7 +200,11 @@ impl Writer {
         }; BUFFER_WIDTH];
         let row = BUFFER_HEIGHT - 1;
         for col in 0..BUFFER_WIDTH {
-            line[col] = self.vga_buffer.chars[row][col].read();
+            let mut char = self.vga_buffer.chars[row][col].read();
+            if char.color != self.color_code && (col > 1 || ( char.ascii != b'$' && char.ascii != b'>')) {
+                char.color = self.color_code;
+            }
+            line[col] = char;
         }
         self.lines[self.active_tab].push_new_line(line);
         self.clear_row(BUFFER_HEIGHT - 1);
@@ -205,25 +261,8 @@ impl Writer {
         }
     }
 
-    fn update_vga_buffer(&mut self) {
+    pub fn update_vga_buffer(&mut self) {
         self.print_interface();
-        // for col in 0..(BUFFER_WIDTH) {
-        //     self.vga_buffer.chars[BUFFER_HEIGHT - 2][col].write(ScreenChar {
-        //         ascii: 0xc4,
-        //         color: ColorCode((Color::Black as u8) << 4 | (Color::LightBlue as u8)),
-        //     });
-        // }
-        // if self.cmd == true {
-        //     self.vga_buffer.chars[BUFFER_HEIGHT - 1][0].write(ScreenChar {
-        //         ascii: b'$',
-        //         color: ColorCode((Color::Black as u8) << 4 | (Color::LightBlue as u8)),
-        //     });
-        //     self.vga_buffer.chars[BUFFER_HEIGHT - 1][1].write(ScreenChar {
-        //         ascii: b'>',
-        //         color: ColorCode((Color::Black as u8) << 4 | (Color::LightBlue as u8)),
-        //     });
-        // }
-        // nettoyer toutes les lignes de l'historique et les update
         for row in 0..(BUFFER_HEIGHT-2) {
             self.clear_row(row);
             for col in 0..(BUFFER_WIDTH) {
@@ -311,11 +350,11 @@ impl Writer {
                 ascii: b'>',
                 color: ColorCode((Color::Black as u8) << 4 | (color as u8)),
             });
+            self.vga_buffer.chars[BUFFER_HEIGHT - 1][2].write(ScreenChar {
+                ascii: b' ',
+                color: ColorCode((color as u8) << 4 | (Color::Black as u8)),
+            });
         }
-    }
-
-    pub fn get_vga_buffer(&mut self, row: usize, col: usize) -> ScreenChar {
-        self.vga_buffer.chars[row][col].read()
     }
 
     pub fn set_vga_buffer(&mut self, row:usize, col: usize, byte: u8, color_code: ColorCode) {
@@ -348,11 +387,15 @@ impl Writer {
         self.lines[self.active_tab].size = 1;
     }
 
-    pub fn switch_tab(&mut self) {
-        if self.active_tab < 2 {
-            self.active_tab += 1;
+    pub fn switch_tab(&mut self, n: usize) {
+        if n == 0 {
+            if self.active_tab < 2 {
+                self.active_tab += 1;
+            } else {
+                self.active_tab = 0;
+            }
         } else {
-            self.active_tab = 0;
+            self.active_tab = n - 1;
         }
     }
 }
@@ -369,6 +412,10 @@ lazy_static! {
         scroll: [0; 3],
         cmd: false,
         active_tab: 0,
+        behind_cursor: ScreenChar{
+            ascii: b' ',
+            color: ColorCode::new(Color::White, Color::Black),
+        }
     });
 }
 
@@ -422,7 +469,7 @@ pub fn disable_cursor() {
 
 pub fn print_welcome_screen() {
     disable_cursor();
-    print!(
+    println!(
 "/* ************************************************************************** */
 /*                                                                            */
 /*                                                        :::      ::::::::   */
@@ -434,8 +481,8 @@ pub fn print_welcome_screen() {
 /*                                                    ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */");
+    // println!("");
     WRITER.lock().change_color(Color::White, Color::Black);
-    println!("");
     println!(
 "Welcome to our useless kernel !!!
 It can't do much for now and probably never will
