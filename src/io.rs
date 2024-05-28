@@ -1,9 +1,9 @@
-use core::{arch::asm, panic};
+use core::arch::asm;
 
 use println;
 use print;
 
-use crate::{dump_stack, print_mem_area, print_mem_line, tetris, vga_buffer::{self, Color, WRITER}};
+use crate::{print_mem_area, tetris, vga_buffer::{self, Color, WRITER}};
 
 const PS2_DATA_PORT: u16 = 0x60;
 const PS2_STATUS_PORT: u16 = 0x64;
@@ -213,7 +213,6 @@ pub fn handle_keyboard_input(scan_code: u8) {
         else {
             print!("{}",KBD_US_MAJ[scan_code as usize]);
         }
-        static mut FIRST: bool = true;
         if scan_code == 28 {
             let cmd = WRITER.lock().get_last_line();
             let mut tmp: [u8; 80] = [0; 80];
@@ -239,8 +238,6 @@ pub fn handle_keyboard_input(scan_code: u8) {
         }
     }
 }
-
-use tetris::ft_tetris;
 
 fn call_function (input: &str) {
     WRITER.lock().toggle_cmd(false);

@@ -119,17 +119,16 @@ impl Writer {
                     self.column_position[self.active_tab] -= 1;
                     let row = BUFFER_HEIGHT - 1;
                     let col = self.column_position[self.active_tab];
-                    let color_code = ColorCode((Color::Black as u8) << 4 | (Color::Black as u8));
-                    self.vga_buffer.chars[row][col].write(ScreenChar{
-                        ascii: ' ' as u8,
-                        color: color_code,
-                    });
-                    if col < BUFFER_WIDTH - 1 {
-                        self.vga_buffer.chars[row][col + 1].write(ScreenChar{
-                            ascii: ' ' as u8,
-                            color: ColorCode((Color::Black as u8) << 4 | (Color::Black as u8)),
+                    for i in col..(BUFFER_WIDTH - 1) {
+                        self.vga_buffer.chars[row][i].write(ScreenChar{
+                            ascii: self.vga_buffer.chars[row][i + 1].read().ascii as u8,
+                            color: self.color_code,
                         });
                     }
+                    self.vga_buffer.chars[row][BUFFER_WIDTH - 1].write(ScreenChar{
+                        ascii: ' ' as u8,
+                        color: self.color_code,
+                    });
                     self.update_cursor(col);
                 }
             },
@@ -140,6 +139,12 @@ impl Writer {
                 let row = BUFFER_HEIGHT - 1;
                 let col = self.column_position[self.active_tab];
                 let color_code = self.color_code;
+                for i in ((col + 1)..(BUFFER_WIDTH - 1)).rev() {
+                    self.vga_buffer.chars[row][i].write(ScreenChar{
+                        ascii: self.vga_buffer.chars[row][i - 1].read().ascii as u8,
+                        color: self.color_code,
+                    });
+                }
                 self.vga_buffer.chars[row][col].write(ScreenChar{
                     ascii: byte,
                     color: color_code,
@@ -346,10 +351,6 @@ impl Writer {
                 color: ColorCode((color as u8) << 4 | (Color::Black as u8)),
             });
         }
-    }
-
-    pub fn get_vga_buffer(&mut self, row: usize, col: usize) -> ScreenChar {
-        self.vga_buffer.chars[row][col].read()
     }
 
     pub fn set_vga_buffer(&mut self, row:usize, col: usize, byte: u8, color_code: ColorCode) {
