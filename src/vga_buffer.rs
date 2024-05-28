@@ -164,6 +164,26 @@ impl Writer {
         self.vga_buffer.chars[row][position].write(cursor);
     }
 
+    pub fn move_cursor(&mut self, offset: i8) {
+        let row = BUFFER_HEIGHT - 1;
+        let col = self.column_position[self.active_tab];
+        if col > BUFFER_WIDTH - 2 && offset > 0 {
+            return;
+        }
+        if col < BUFFER_WIDTH {
+            self.vga_buffer.chars[row][col].write(self.behind_cursor);
+        }
+        if offset > 0 && col < BUFFER_WIDTH {
+            self.column_position[self.active_tab] += 1;
+        }
+        if offset < 0 && col > 2 && col <= BUFFER_WIDTH {
+            self.column_position[self.active_tab] -= 1;
+        }
+        if self.column_position[self.active_tab] < BUFFER_WIDTH {
+            self.update_cursor(self.column_position[self.active_tab]);
+        }
+    }
+
     fn new_line(&mut self) {
         let mut line = [ScreenChar {
             ascii: b' ',
