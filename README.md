@@ -13,6 +13,7 @@ This project aims to build a minimalistic operating system kernel from scratch. 
 - Written in assembly language and Rust.
 - Provides a foundation for learning about operating system internals and kernel development.
 - Still very early stage kernel, no interrupts, no paging, at least for now...
+- TETRIS !
 
 ## Getting Started
 
