@@ -41,5 +41,5 @@ Scroll up and down with up and down arrows, move cursor with left and right arro
 
 ## Acknowledgements
 
-This project was made with my teammate [lanzaj](https://github.com/lanzaj)
+This project was made with my teammate [tgrasset](https://github.com/tgrasset)
  at 42school.
